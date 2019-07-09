@@ -3,6 +3,10 @@
 from bs4 import BeautifulSoup as bsoup
 import requests, re, time, os, tweepy
 
+settingsConf = "settings.conf"
+stable = "0"
+devel = "0"
+
 with open("auth.cred", "r") as authFile:
 	authCred = authFile.readlines()
 	
@@ -11,22 +15,24 @@ with open("auth.cred", "r") as authFile:
 	ACCESS_KEY = authCred[2].split(" ")[-1].strip("\n")
 	ACCESS_SECRET = authCred[3].split(" ")[-1].strip("\n")
 
-	print("{}\n{}\n{}\n{}".format(CONSUMER_KEY, CONSUMER_SECRET, ACCESS_KEY, ACCESS_SECRET))
 	auth = tweepy.OAuthHandler(CONSUMER_KEY, CONSUMER_SECRET)
 	auth.set_access_token(ACCESS_KEY, ACCESS_SECRET)
 	api = tweepy.API(auth)
 
-with open("settings.conf", "r") as settingsFile:
-	settings = settingsFile.readlines()
+def versionCheck():
+	global stable, devel
+	if os.path.isfile(settingsConf):
+		with open(settingsConf, "r") as settingsFile:
+			settings = settingsFile.readlines()
 
-	for line in settings:
-		if line.startswith("Stable"):
-			stable = line.split(" ")[-1].strip("\n")
-		if line.startswith("Development"):
-			devel = line.split(" ")[-1].strip("\n")
-print("--- From file --- \n\nStable release: {} \nDevelopment release: {}\n".format(stable, devel))
+			for line in settings:
+				if line.startswith("Stable"):
+					stable = line.split(" ")[-1].strip("\n")
+				if line.startswith("Development"):
+					devel = line.split(" ")[-1].strip("\n")
+		print("--- From file --- \n\nStable release: {} \nDevelopment release: {}\n".format(stable, devel))
 
-while True:
+def main():
 	# Get information from winehq website
 	URL = "https://www.winehq.org/"
 	page = requests.get(URL)
@@ -44,8 +50,8 @@ while True:
 		print("!!! UPDATE DETECTED! !!!")
 		print("--- From web --- \n\nStable release: {} \nDevelopment release: {}\n".format(rawStable, rawDevel))
 		print("Writing to configuration file.")
-		with open("settings.conf", "r") as settingsFile:
-			with open("settings.conf.new", "w") as newSettings:
+		with open(settingsConf, "r") as settingsFile:
+			with open(settingsConf + ".new", "w") as newSettings:
 				settings = settingsFile.readlines()
 				if stable != rawStable and devel == rawDevel:
 					api.update_status("WINE Stable has updated to version {}!\nCheck the release notes here: {}".format(rawStable, URL+versions[0]))
@@ -56,9 +62,12 @@ while True:
 				else:
 					api.update_status("WINE Stable has updated to version {} and WINE Development has updated to version {}!\nCheck the release notes here: \n{} (Stable)\n{} (Development)".format(rawStable, rawDevel, URL+versions[0], URL+versions[1]))
 					newSettings.write("Stable: {}Development: {}".format(rawStable, rawDevel))
-		os.rename("settings.conf.new", "settings.conf")
+		os.rename(settingsConf +".new", settingsConf)
 
 	else:
 		print("No update detected.")
 	
-	time.sleep(60**2 * 2)
+while True:
+	versionCheck()
+	main()
+	time.sleep(60**2 * 3.25)
