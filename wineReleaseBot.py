@@ -7,6 +7,7 @@ import requests, re, time, os, tweepy
 settingsConf = "settings.conf"
 stable = "0"
 devel = "0"
+proton = "0"
 
 # Remove this if you don't want Twitter support
 if os.path.isfile("twitter-auth.cred"):
@@ -46,7 +47,7 @@ twitter = tweepy.API(auth)
 mastodon = Mastodon(client_id=MAST_CONSUMER_KEY, client_secret=MAST_CONSUMER_SECRET, access_token=MAST_ACCESS_KEY, api_base_url='botsin.space')
 
 def versionCheck():
-	global stable, devel
+	global stable, devel, proton
 	if os.path.isfile(settingsConf):
 		with open(settingsConf, "r") as settingsFile:
 			settings = settingsFile.readlines()
@@ -56,52 +57,94 @@ def versionCheck():
 					stable = line.split(" ")[-1].strip("\n")
 				if line.startswith("Development"):
 					devel = line.split(" ")[-1].strip("\n")
-		print("--- From file --- \n\nStable release: {} \nDevelopment release: {}\n".format(stable, devel))
+				if line.startswith("Proton"):
+					proton = line.split(" ")[-1].strip("\n")
+		print("--- From file --- \n\nStable release: {} \nDevelopment release: {}\nProton release: {}\n".format(stable, devel, proton))
 
 def main():
 	# Get information from winehq website
-	URL = "https://www.winehq.org"
-	page = requests.get(URL)
-	parsed = bsoup(page.content, 'html.parser')
+	URLs = ["https://www.winehq.org", "https://github.com"]
+	repo = "/ValveSoftware/Proton/releases"
+	URL = URLs[0]
+	for URL in URLs:
+		if URL == URLs[0]:
+			current = "wine"
+			page = requests.get(URL)
+		if URL == URLs[1]:
+			current = "proton"
+			page = requests.get(URL + repo)
 
-	# Look for anything with "/announce/" in the href. We can then just look at the first two in the list.
-	versions = [a['href'] for a in parsed.find_all(name="a", href=re.compile("/announce/"))]
-	versions = versions[0:2]
+		parsed = bsoup(page.content, 'html.parser')
 
-	rawStable = versions[0].split("/")[-1]
-	rawDevel = versions[1].split("/")[-1]
+		if current == "wine":
+			# Look for anything with "/announce/" in the href. We can then just look at the first two in the list.
+			versions = [a['href'] for a in parsed.find_all(name="a", href=re.compile("/announce/"))]
 
-	#TODO: Fix this awful spaghetti
-	if stable != rawStable or devel != rawDevel:
-		print("!!! UPDATE DETECTED! !!!")
-		print("--- From web --- \n\nStable release: {} \nDevelopment release: {}\n".format(rawStable, rawDevel))
-		print("Writing to configuration file.")
-		with open(settingsConf, "r") as settingsFile:
-			with open(settingsConf + ".new", "w") as newSettings:
-				settings = settingsFile.readlines()
-				if stable != rawStable and devel == rawDevel:
-					twitter.update_status("WINE Stable has updated to version {}!\nCheck the release notes here: {}".format(rawStable, URL+versions[0]))
-					print("Sent update to Twitter.")
-					mastodon.status_post("WINE Stable has updated to version {}!\nCheck the release notes here: {}".format(rawStable, URL+versions[0]))
-					print("Sent update to Mastodon.")
-					newSettings.write("Stable: {}{}".format(rawStable, settings[1]))
-					print("Written update to file.")
-				elif stable == rawStable and devel != rawDevel:
-					twitter.update_status("WINE Development has updated to version {}!\nCheck the release notes here: {}".format(rawDevel, URL+versions[1]))
-					print("Sent update to Twitter.")
-					mastodon.status_post("WINE Development has updated to version {}!\nCheck the release notes here: {}".format(rawDevel, URL+versions[1]))
-					print("Sent update to Mastodon.")
-					newSettings.write("{}Development: {}".format(settings[0], rawDevel))
-					print("Written update to file.")
-				else:
-					twitter.update_status("WINE Stable has updated to version {} and WINE Development has updated to version {}!\nCheck the release notes here: \n{} (Stable)\n{} (Development)".format(rawStable, rawDevel, URL+versions[0], URL+versions[1]))
-					print("Sent update to Twitter.")
-					mastodon.status_post("WINE Stable has updated to version {} and WINE Development has updated to version {}!\nCheck the release notes here: \n{} (Stable)\n{} (Development)".format(rawStable, rawDevel, URL+versions[0], URL+versions[1]))
-					print("Sent update to Mastodon.")
-					newSettings.write("Stable: {}Development: {}".format(rawStable, rawDevel))
-					print("Written update to file.")
+			rawStable = versions[0].split("/")[-1]
+			rawDevel = versions[1].split("/")[-1]
 
-		os.rename(settingsConf +".new", settingsConf)
+			#TODO: Fix this awful spaghetti
+			if stable != rawStable or devel != rawDevel:
+				print("!!! WINE UPDATE DETECTED! !!!")
+				print("--- From web --- \n\nStable release: {} \nDevelopment release: {}\n".format(rawStable, rawDevel))
+				print("Writing to configuration file.")
+				with open(settingsConf, "r") as settingsFile:
+					with open(settingsConf + ".new", "w") as newSettings:
+						settings = settingsFile.readlines()
+						if stable != rawStable and devel == rawDevel:
+							twitter.update_status("WINE Stable has updated to version {}!\nCheck the release notes here: {}".format(rawStable, URL+versions[0]))
+							print("Sent update to Twitter.")
+							mastodon.status_post("WINE Stable has updated to version {}!\nCheck the release notes here: {}".format(rawStable, URL+versions[0]))
+							print("Sent update to Mastodon.")
+							newSettings.write("Stable: {}{}".format(rawStable, settings[1]))
+							print("Written update to file.")
+						elif stable == rawStable and devel != rawDevel:
+							twitter.update_status("WINE Development has updated to version {}!\nCheck the release notes here: {}".format(rawDevel, URL+versions[1]))
+							print("Sent update to Twitter.")
+							mastodon.status_post("WINE Development has updated to version {}!\nCheck the release notes here: {}".format(rawDevel, URL+versions[1]))
+							print("Sent update to Mastodon.")
+							newSettings.write("{}Development: {}".format(settings[0], rawDevel))
+							print("Written update to file.")
+						else:
+							twitter.update_status("WINE Stable has updated to version {} and WINE Development has updated to version {}!\nCheck the release notes here: \n{} (Stable)\n{} (Development)".format(rawStable, rawDevel, URL+versions[0], URL+versions[1]))
+							print("Sent update to Twitter.")
+							mastodon.status_post("WINE Stable has updated to version {} and WINE Development has updated to version {}!\nCheck the release notes here: \n{} (Stable)\n{} (Development)".format(rawStable, rawDevel, URL+versions[0], URL+versions[1]))
+							print("Sent update to Mastodon.")
+							newSettings.write("Stable: {}Development: {}".format(rawStable, rawDevel))
+							print("Written update to file.")
+
+				os.rename(settingsConf +".new", settingsConf)
+
+		if current == "proton":
+			versions = [a['href'] for a in parsed.find_all(name="a", href=re.compile("releases/tag"))]
+
+			latest = versions[0]
+			link = URL + latest
+			version = latest.split("/")[-1].replace("proton-", "")
+
+			if proton != version:
+				print("!!! PROTON UPDATE DETECTED !!!")
+				print("--- From web -- \n\nLatest release: {}\n".format(version))
+				
+				print("Sending update to Twitter.")
+				twitter.update_status("Proton has update to version {}!\nCheck out the release here: {}".format(version, link))
+				print("Sent update to Twitter.")
+				
+				print("Sending update to Mastodon.")
+				mastodon.status_post("Proton has update to version {}!\nCheck out the release here: {}".format(version, link))
+				print("Sent update to Mastodon.")
+				
+				print("Writing to configuration file.")
+				with open(settingsConf, "r") as settingsFile:
+					with open(settingsConf + ".new", "w") as newSettings:
+						for line in settingsFile:
+							if line.startswith("Proton"):
+								newSettings.write("Proton: {}\n".format(version))
+							else:
+								newSettings.write(line)
+
+
+				os.rename(settingsConf +".new", settingsConf)
 
 	else:
 		print("No update detected.")
