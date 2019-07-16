@@ -1,6 +1,6 @@
 # Wine Release Bot
 
-TL;DR - See the bot in action at https://twitter.com/WineReleaseBot and https://botsin.space/WineReleaseBot
+TL;DR - See the bot in action at https://twitter.com/WineReleaseBot and https://botsin.space/@WineReleaseBot
 
 This bot uses Tweepy, Mastodon.py, BeutifulSoup, and Requests to check https://winehq.org for wine updates and posts the updates on Twitter and Mastodon. Run `pip{3} install -r requirements.txt {--user}` to run the script.
 
