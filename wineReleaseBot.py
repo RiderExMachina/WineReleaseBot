@@ -9,6 +9,7 @@ stable = "0"
 devel = "0"
 proton = "0"
 
+mastodonURL = "botsin.space"
 # Remove this if you don't want Twitter support
 if os.path.isfile("twitter-auth.cred"):
 	with open("twitter-auth.cred", "r") as twitterAuth:
@@ -44,7 +45,7 @@ twitter = tweepy.API(auth)
 # End Twitter remove
 
 #Remove the next line if you don't want mastodon support
-mastodon = Mastodon(client_id=MAST_CONSUMER_KEY, client_secret=MAST_CONSUMER_SECRET, access_token=MAST_ACCESS_KEY, api_base_url='botsin.space')
+mastodon = Mastodon(client_id=MAST_CONSUMER_KEY, client_secret=MAST_CONSUMER_SECRET, access_token=MAST_ACCESS_KEY, api_base_url=mastodonURL)
 
 def versionCheck():
 	global stable, devel, proton
@@ -61,7 +62,17 @@ def versionCheck():
 					proton = line.split(" ")[-1].strip("\n")
 		print("--- From file --- \n\nStable release: {} \nDevelopment release: {}\nProton release: {}\n".format(stable, devel, proton))
 
+def post(message):
+    print("Posting update to Twitter.")
+    twitter.update_status(message)
+    print("Updated to Twitter posted successfully.\n")
+
+    print("Posting update to Mastodon.")
+    mastodon.status_post(message)
+    print("Updated to Mastodon successfully.\n")
+
 def main():
+	global stable, devel, proton
 	# Get information from winehq website
 	URLs = ["https://www.winehq.org", "https://github.com"]
 	repo = "/ValveSoftware/Proton/releases"
@@ -90,30 +101,33 @@ def main():
 				print("Writing to configuration file.")
 				with open(settingsConf, "r") as settingsFile:
 					with open(settingsConf + ".new", "w") as newSettings:
-						settings = settingsFile.readlines()
 						if stable != rawStable and devel == rawDevel:
-							twitter.update_status("WINE Stable has updated to version {}!\nCheck the release notes here: {}".format(rawStable, URL+versions[0]))
-							print("Sent update to Twitter.")
-							mastodon.status_post("WINE Stable has updated to version {}!\nCheck the release notes here: {}".format(rawStable, URL+versions[0]))
-							print("Sent update to Mastodon.")
-							newSettings.write("Stable: {}{}".format(rawStable, settings[1]))
-							print("Written update to file.")
-						elif stable == rawStable and devel != rawDevel:
-							twitter.update_status("WINE Development has updated to version {}!\nCheck the release notes here: {}".format(rawDevel, URL+versions[1]))
-							print("Sent update to Twitter.")
-							mastodon.status_post("WINE Development has updated to version {}!\nCheck the release notes here: {}".format(rawDevel, URL+versions[1]))
-							print("Sent update to Mastodon.")
-							newSettings.write("{}Development: {}".format(settings[0], rawDevel))
-							print("Written update to file.")
-						else:
-							twitter.update_status("WINE Stable has updated to version {} and WINE Development has updated to version {}!\nCheck the release notes here: \n{} (Stable)\n{} (Development)".format(rawStable, rawDevel, URL+versions[0], URL+versions[1]))
-							print("Sent update to Twitter.")
-							mastodon.status_post("WINE Stable has updated to version {} and WINE Development has updated to version {}!\nCheck the release notes here: \n{} (Stable)\n{} (Development)".format(rawStable, rawDevel, URL+versions[0], URL+versions[1]))
-							print("Sent update to Mastodon.")
-							newSettings.write("Stable: {}Development: {}".format(rawStable, rawDevel))
+							post("WINE Stable has updated to version {}!\nCheck the release notes here: {}".format(rawStable, URL+versions[0]))
+							for line in settingsFile:
+								if line.startswith("Stable"):
+									newSettings.write("Stable: {}\n".format(rawStable))
+							else:
+								newSettings.write(line)
 							print("Written update to file.")
 
+						elif stable == rawStable and devel != rawDevel:
+							post("WINE Development has updated to version {}!\nCheck the release notes here: {}".format(rawDevel, URL+versions[1]))
+							for line in file:
+								if line.startswith("Development"):
+									newSettings.write("Development: {}\n".format(rawDevel))
+							else:
+								newSettings.write(line)
+
+							print("Written update to file.\n")
+						else:
+							post("WINE Stable has updated to version {} and WINE Development has updated to version {}!\nCheck the release notes here: \n{} (Stable)\n{} (Development)".format(rawStable, rawDevel, URL+versions[0], URL+versions[1]))
+							newSettings.write("Stable: {}\nDevelopment: {}\nProton: {}\n".format(rawStable, rawDevel, proton))
+							print("Written update to file.\n")
+
 				os.rename(settingsConf +".new", settingsConf)
+				stable = rawStable
+				devel = rawDevel
+
 
 		if current == "proton":
 			versions = [a['href'] for a in parsed.find_all(name="a", href=re.compile("releases/tag"))]
@@ -126,13 +140,7 @@ def main():
 				print("!!! PROTON UPDATE DETECTED !!!")
 				print("--- From web -- \n\nLatest release: {}\n".format(version))
 				
-				print("Sending update to Twitter.")
-				twitter.update_status("Proton has update to version {}!\nCheck out the release here: {}".format(version, link))
-				print("Sent update to Twitter.")
-				
-				print("Sending update to Mastodon.")
-				mastodon.status_post("Proton has update to version {}!\nCheck out the release here: {}".format(version, link))
-				print("Sent update to Mastodon.")
+				post("Proton has update to version {}!\nCheck out the release here: {}".format(version, link))
 				
 				print("Writing to configuration file.")
 				with open(settingsConf, "r") as settingsFile:
@@ -145,12 +153,15 @@ def main():
 
 
 				os.rename(settingsConf +".new", settingsConf)
+				proton = version
 
 	else:
 		print("No update detected.")
 	
+
+versionCheck()
+
 while True:
-	versionCheck()
 	main()
 	print("Job done! Sleeping for 3 hours.")
 	time.sleep(60**2 * 3.25)
