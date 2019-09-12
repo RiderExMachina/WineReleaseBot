@@ -8,7 +8,10 @@ settingsConf = "settings.conf"
 stable = "0"
 devel = "0"
 proton = "0"
+dxvk = "0"
+d9vk = "0"
 
+mastodonURL = "botsin.space"
 # Remove this if you don't want Twitter support
 if os.path.isfile("twitter-auth.cred"):
 	with open("twitter-auth.cred", "r") as twitterAuth:
@@ -44,10 +47,10 @@ twitter = tweepy.API(auth)
 # End Twitter remove
 
 #Remove the next line if you don't want mastodon support
-mastodon = Mastodon(client_id=MAST_CONSUMER_KEY, client_secret=MAST_CONSUMER_SECRET, access_token=MAST_ACCESS_KEY, api_base_url='botsin.space')
+mastodon = Mastodon(client_id=MAST_CONSUMER_KEY, client_secret=MAST_CONSUMER_SECRET, access_token=MAST_ACCESS_KEY, api_base_url=mastodonURL)
 
 def versionCheck():
-	global stable, devel, proton
+	global stable, devel, proton, d9vk, dxvk
 	if os.path.isfile(settingsConf):
 		with open(settingsConf, "r") as settingsFile:
 			settings = settingsFile.readlines()
@@ -55,25 +58,56 @@ def versionCheck():
 			for line in settings:
 				if line.startswith("Stable"):
 					stable = line.split(" ")[-1].strip("\n")
-				if line.startswith("Development"):
+				elif line.startswith("Development"):
 					devel = line.split(" ")[-1].strip("\n")
-				if line.startswith("Proton"):
+				elif line.startswith("Proton"):
 					proton = line.split(" ")[-1].strip("\n")
-		print("--- From file --- \n\nStable release: {} \nDevelopment release: {}\nProton release: {}\n".format(stable, devel, proton))
+				elif line.startswith("DXVK"):
+					dxvk = line.split(" ")[-1].strip("\n")
+				elif line.startswith("D9VK"):
+					d9vk = line.split(" ")[-1].strip("\n")
+		print("--- From file ---")
+		for line in settings:
+			print(line.replace("\n", ""))
+		print("")
+
+def post(message):
+    print("Posting update to Twitter.")
+    twitter.update_status(message)
+    print("Updated to Twitter posted successfully.\n")
+
+    print("Posting update to Mastodon.")
+    mastodon.status_post(message)
+    print("Updated to Mastodon successfully.\n")
+
+def write2File():
+	global stable, devel, proton, dxvk, d9vk
+
+	print("Writing to configuration file.\n")
+	with open(settingsConf + ".new", "w") as newSettings:
+		newSettings.write("Stable: {}\nDevelopment: {}\nProton: {}\nDXVK: {}\nD9VK: {}".format(stable, devel, proton, dxvk, d9vk))
+
+	os.rename(settingsConf + ".new", settingsConf)
+	print("Written to file.\n")
 
 def main():
+	global stable, devel, proton, dxvk, d9vk
 	# Get information from winehq website
-	URLs = ["https://www.winehq.org", "https://github.com"]
-	repo = "/ValveSoftware/Proton/releases"
+	URLs = ["https://www.winehq.org", "https://github.com/ValveSoftware/Proton/releases", "https://github.com/doitsujin/dxvk/releases", "https://github.com/Joshua-Ashton/d9vk/releases"]
+	gitURL = "https://github.com"
 	URL = URLs[0]
 	for URL in URLs:
 		if URL == URLs[0]:
 			current = "wine"
-			page = requests.get(URL)
-		if URL == URLs[1]:
+		elif URL == URLs[1]:
 			current = "proton"
-			page = requests.get(URL + repo)
+		elif URL == URLs[2]:
+			current = "dxvk"
+		elif URL == URLs[3]:
+			current = "d9vk"
 
+
+		page = requests.get(URL)
 		parsed = bsoup(page.content, 'html.parser')
 
 		if current == "wine":
@@ -88,69 +122,72 @@ def main():
 				print("!!! WINE UPDATE DETECTED! !!!")
 				print("--- From web --- \n\nStable release: {} \nDevelopment release: {}\n".format(rawStable, rawDevel))
 				print("Writing to configuration file.")
-				with open(settingsConf, "r") as settingsFile:
-					with open(settingsConf + ".new", "w") as newSettings:
-						settings = settingsFile.readlines()
-						if stable != rawStable and devel == rawDevel:
-							twitter.update_status("WINE Stable has updated to version {}!\nCheck the release notes here: {}".format(rawStable, URL+versions[0]))
-							print("Sent update to Twitter.")
-							mastodon.status_post("WINE Stable has updated to version {}!\nCheck the release notes here: {}".format(rawStable, URL+versions[0]))
-							print("Sent update to Mastodon.")
-							newSettings.write("Stable: {}{}".format(rawStable, settings[1]))
-							print("Written update to file.")
-						elif stable == rawStable and devel != rawDevel:
-							twitter.update_status("WINE Development has updated to version {}!\nCheck the release notes here: {}".format(rawDevel, URL+versions[1]))
-							print("Sent update to Twitter.")
-							mastodon.status_post("WINE Development has updated to version {}!\nCheck the release notes here: {}".format(rawDevel, URL+versions[1]))
-							print("Sent update to Mastodon.")
-							newSettings.write("{}Development: {}".format(settings[0], rawDevel))
-							print("Written update to file.")
-						else:
-							twitter.update_status("WINE Stable has updated to version {} and WINE Development has updated to version {}!\nCheck the release notes here: \n{} (Stable)\n{} (Development)".format(rawStable, rawDevel, URL+versions[0], URL+versions[1]))
-							print("Sent update to Twitter.")
-							mastodon.status_post("WINE Stable has updated to version {} and WINE Development has updated to version {}!\nCheck the release notes here: \n{} (Stable)\n{} (Development)".format(rawStable, rawDevel, URL+versions[0], URL+versions[1]))
-							print("Sent update to Mastodon.")
-							newSettings.write("Stable: {}Development: {}".format(rawStable, rawDevel))
-							print("Written update to file.")
+				
+				if stable != rawStable and devel == rawDevel:
+					post("WINE Stable has updated to version {}!\nCheck the release notes here: {}".format(rawStable, URL+versions[0]))
+					
+				elif stable == rawStable and devel != rawDevel:
+					post("WINE Development has updated to version {}!\nCheck the release notes here: {}".format(rawDevel, URL+versions[1]))
 
-				os.rename(settingsConf +".new", settingsConf)
+				else:
+					post("WINE Stable has updated to version {} and WINE Development has updated to version {}!\nCheck the release notes here: \n{} (Stable)\n{} (Development)".format(rawStable, rawDevel, URL+versions[0], URL+versions[1]))
+				stable = rawStable
+				devel = rawDevel
+
+				write2File()
+
 
 		if current == "proton":
 			versions = [a['href'] for a in parsed.find_all(name="a", href=re.compile("releases/tag"))]
-
 			latest = versions[0]
-			link = URL + latest
+			link = gitURL + latest
 			version = latest.split("/")[-1].replace("proton-", "")
 
 			if proton != version:
 				print("!!! PROTON UPDATE DETECTED !!!")
 				print("--- From web -- \n\nLatest release: {}\n".format(version))
 				
-				print("Sending update to Twitter.")
-				twitter.update_status("Proton has update to version {}!\nCheck out the release here: {}".format(version, link))
-				print("Sent update to Twitter.")
+				post("Proton has update to version {}!\nCheck out the release here: {}".format(version, link))
 				
-				print("Sending update to Mastodon.")
-				mastodon.status_post("Proton has update to version {}!\nCheck out the release here: {}".format(version, link))
-				print("Sent update to Mastodon.")
+				proton = version
+				write2File()
+		
+		if current == "dxvk":
+			versions = [a['href'] for a in parsed.find_all(name="a", href=re.compile("releases/tag"))]
+			latest = versions[0]
+			link = gitURL + latest
+			version = latest.split("/")[-1].replace("v", "")
+
+			if dxvk != version:
+				print("!!! DXVK UPDATE DETECTED !!!")
+				print("--- From web -- \n\nLatest release: {}\n".format(version))
 				
-				print("Writing to configuration file.")
-				with open(settingsConf, "r") as settingsFile:
-					with open(settingsConf + ".new", "w") as newSettings:
-						for line in settingsFile:
-							if line.startswith("Proton"):
-								newSettings.write("Proton: {}\n".format(version))
-							else:
-								newSettings.write(line)
+				post("DXVK has update to version {}!\nCheck out the release here: {}".format(version, link))
 
+				dxvk = version
+				write2File()
 
-				os.rename(settingsConf +".new", settingsConf)
+		if current == "d9vk":
+			versions = [a['href'] for a in parsed.find_all(name="a", href=re.compile("releases/tag"))]
+			latest = versions[0]
+			link = gitURL + latest
+			version = latest.split("/")[-1]
+
+			if d9vk != version:
+				print("!!! D9VK UPDATE DETECTED !!!")
+				print("--- From web -- \n\nLatest release: {}\n".format(version))
+				
+				post("D9VK has update to version {}!\nCheck out the release here: {}".format(version, link))
+				d9vk = version
+				write2File()
 
 	else:
 		print("No update detected.")
 	
+
+versionCheck()
+
 while True:
-	versionCheck()
 	main()
-	print("Job done! Sleeping for 3 hours.")
+	print("Checked! Sleeping for 3 hours.\n")
 	time.sleep(60**2 * 3.25)
