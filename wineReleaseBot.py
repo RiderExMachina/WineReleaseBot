@@ -11,7 +11,6 @@ proton = "0"
 dxvk = "0"
 d9vk = "0"
 
-mastodonURL = "botsin.space"
 # Remove this if you don't want Twitter support
 if os.path.isfile("twitter-auth.cred"):
 	with open("twitter-auth.cred", "r") as twitterAuth:
@@ -24,9 +23,15 @@ if os.path.isfile("twitter-auth.cred"):
 else:
 	print("Please create a twitter-auth.cred file with your Twitter API information!")
 	exit()
+
+
+auth = tweepy.OAuthHandler(TWITTER_CONSUMER_KEY, TWITTER_CONSUMER_SECRET)
+auth.set_access_token(TWITTER_ACCESS_KEY, TWITTER_ACCESS_SECRET)
+twitter = tweepy.API(auth)
 # End Twitter remove
 
 # Remove this if you don't want Mastodon support
+mastodonURL = "botsin.space"
 if os.path.isfile("mast-auth.cred"):
 	with open("mast-auth.cred", "r") as mastAuth:
 		authCred = mastAuth.readlines()
@@ -37,17 +42,9 @@ if os.path.isfile("mast-auth.cred"):
 else:
 	print("Please create a mast-auth.cred file with your Mastodon API information!")
 	exit()
-# End Mastodon remove
 
-
-# Remove this if you don't want Twitter support
-auth = tweepy.OAuthHandler(TWITTER_CONSUMER_KEY, TWITTER_CONSUMER_SECRET)
-auth.set_access_token(TWITTER_ACCESS_KEY, TWITTER_ACCESS_SECRET)
-twitter = tweepy.API(auth)
-# End Twitter remove
-
-#Remove the next line if you don't want mastodon support
 mastodon = Mastodon(client_id=MAST_CONSUMER_KEY, client_secret=MAST_CONSUMER_SECRET, access_token=MAST_ACCESS_KEY, api_base_url=mastodonURL)
+# End Mastodon remove
 
 def versionCheck():
 	global stable, devel, proton, d9vk, dxvk
@@ -83,7 +80,7 @@ def post(message):
 def write2File():
 	global stable, devel, proton, dxvk, d9vk
 
-	print("Writing to configuration file.\n")
+	print("Writing to configuration file...")
 	with open(settingsConf + ".new", "w") as newSettings:
 		newSettings.write("Stable: {}\nDevelopment: {}\nProton: {}\nDXVK: {}\nD9VK: {}".format(stable, devel, proton, dxvk, d9vk))
 
@@ -117,7 +114,6 @@ def main():
 			rawStable = versions[0].split("/")[-1]
 			rawDevel = versions[1].split("/")[-1]
 
-			#TODO: Fix this awful spaghetti
 			if stable != rawStable or devel != rawDevel:
 				print("!!! WINE UPDATE DETECTED! !!!")
 				print("--- From web --- \n\nStable release: {} \nDevelopment release: {}\n".format(rawStable, rawDevel))
