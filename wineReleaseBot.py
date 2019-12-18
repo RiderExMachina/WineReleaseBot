@@ -9,7 +9,6 @@ stable = "0"
 devel = "0"
 proton = "0"
 dxvk = "0"
-d9vk = "0"
 
 # Remove this if you don't want Twitter support
 if os.path.isfile("twitter-auth.cred"):
@@ -61,8 +60,6 @@ def versionCheck():
 					proton = line.split(" ")[-1].strip("\n")
 				elif line.startswith("DXVK"):
 					dxvk = line.split(" ")[-1].strip("\n")
-				elif line.startswith("D9VK"):
-					d9vk = line.split(" ")[-1].strip("\n")
 		print("--- From file ---")
 		for line in settings:
 			print(line.replace("\n", ""))
@@ -82,15 +79,15 @@ def write2File():
 
 	print("Writing to configuration file...")
 	with open(settingsConf + ".new", "w") as newSettings:
-		newSettings.write("Stable: {}\nDevelopment: {}\nProton: {}\nDXVK: {}\nD9VK: {}".format(stable, devel, proton, dxvk, d9vk))
+		newSettings.write("Stable: {}\nDevelopment: {}\nProton: {}\nDXVK: {}".format(stable, devel, proton, dxvk))
 
 	os.rename(settingsConf + ".new", settingsConf)
 	print("Written to file.\n")
 
 def main():
-	global stable, devel, proton, dxvk, d9vk
+	global stable, devel, proton, dxvk
 	# Get information from winehq website
-	URLs = ["https://www.winehq.org", "https://github.com/ValveSoftware/Proton/releases", "https://github.com/doitsujin/dxvk/releases", "https://github.com/Joshua-Ashton/d9vk/releases"]
+	URLs = ["https://www.winehq.org", "https://github.com/ValveSoftware/Proton/releases", "https://github.com/doitsujin/dxvk/releases"]
 	gitURL = "https://github.com"
 	URL = URLs[0]
 	for URL in URLs:
@@ -100,9 +97,6 @@ def main():
 			current = "proton"
 		elif URL == URLs[2]:
 			current = "dxvk"
-		elif URL == URLs[3]:
-			current = "d9vk"
-
 
 		page = requests.get(URL)
 		parsed = bsoup(page.content, 'html.parser')
@@ -163,20 +157,6 @@ def main():
 				dxvk = version
 				write2File()
 
-		if current == "d9vk":
-			versions = [a['href'] for a in parsed.find_all(name="a", href=re.compile("releases/tag"))]
-			latest = versions[0]
-			link = gitURL + latest
-			version = latest.split("/")[-1]
-
-			if d9vk != version:
-				print("!!! D9VK UPDATE DETECTED !!!")
-				print("--- From web -- \n\nLatest release: {}\n".format(version))
-				
-				post("D9VK has update to version {}!\nCheck out the release here: {}".format(version, link))
-				d9vk = version
-				write2File()
-
 	else:
 		print("No update detected.")
 	
@@ -185,5 +165,5 @@ versionCheck()
 
 while True:
 	main()
-	print("Checked! Sleeping for 3 hours.\n")
-	time.sleep(60**2 * 3.25)
+	print("Checked! Sleeping for 1 hour.\n")
+	time.sleep(60**2 * 0.999999)
