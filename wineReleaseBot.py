@@ -2,13 +2,19 @@
 
 from bs4 import BeautifulSoup as bsoup
 from mastodon import Mastodon
-import requests, re, time, os, tweepy
+import requests, re, time, os, tweepy, argparse
 
+parser = argparse.ArgumentParser()
+parser.add_argument('-d', '--debug', help="Debug mode: will not post to Twitter or Mastodon", default=False, action='store_true')
+args = parser.parse_args()
+
+debug = args.debug
 settingsConf = "settings.conf"
 stable = "0"
 devel = "0"
 proton = "0"
 dxvk = "0"
+ge = "0"
 
 # Remove this if you don't want Twitter support
 if os.path.isfile("twitter-auth.cred"):
@@ -46,7 +52,7 @@ mastodon = Mastodon(client_id=MAST_CONSUMER_KEY, client_secret=MAST_CONSUMER_SEC
 # End Mastodon remove
 
 def versionCheck():
-	global stable, devel, proton, d9vk, dxvk
+	global stable, devel, proton, dxvk, ge
 	if os.path.isfile(settingsConf):
 		with open(settingsConf, "r") as settingsFile:
 			settings = settingsFile.readlines()
@@ -60,34 +66,37 @@ def versionCheck():
 					proton = line.split(" ")[-1].strip("\n")
 				elif line.startswith("DXVK"):
 					dxvk = line.split(" ")[-1].strip("\n")
+				elif line.startswith("GE"):
+					ge = line.split(" ")[-1].strip("\n")
 		print("--- From file ---")
 		for line in settings:
 			print(line.replace("\n", ""))
 		print("")
 
 def post(message):
-    print("Posting update to Twitter.")
-    twitter.update_status(message)
-    print("Updated to Twitter posted successfully.\n")
-
-    print("Posting update to Mastodon.")
-    mastodon.status_post(message)
-    print("Updated to Mastodon successfully.\n")
+	if not debug:
+		print("Posting update to Twitter.")
+		twitter.update_status(message)
+		print("Updated to Twitter posted successfully.\n")
+		
+		print("Posting update to Mastodon.")
+		mastodon.status_post(message)
+		print("Updated to Mastodon successfully.\n")
 
 def write2File():
-	global stable, devel, proton, dxvk, d9vk
+	global stable, devel, proton, dxvk, ge
 
 	print("Writing to configuration file...")
 	with open(settingsConf + ".new", "w") as newSettings:
-		newSettings.write("Stable: {}\nDevelopment: {}\nProton: {}\nDXVK: {}".format(stable, devel, proton, dxvk))
+		newSettings.write("Stable: {}\nDevelopment: {}\nProton: {}\nDXVK: {}\nGE: {}".format(stable, devel, proton, dxvk, ge))
 
 	os.rename(settingsConf + ".new", settingsConf)
 	print("Written to file.\n")
 
 def main():
-	global stable, devel, proton, dxvk
+	global stable, devel, proton, dxvk, ge
 	# Get information from winehq website
-	URLs = ["https://www.winehq.org", "https://github.com/ValveSoftware/Proton/releases", "https://github.com/doitsujin/dxvk/releases"]
+	URLs = ["https://www.winehq.org", "https://github.com/ValveSoftware/Proton/releases", "https://github.com/doitsujin/dxvk/releases", "https://github.com/GloriousEggroll/proton-ge-custom/releases"]
 	gitURL = "https://github.com"
 	URL = URLs[0]
 	for URL in URLs:
@@ -97,6 +106,8 @@ def main():
 			current = "proton"
 		elif URL == URLs[2]:
 			current = "dxvk"
+		elif URL == URLs[3]:
+			current = "ge"
 
 		page = requests.get(URL)
 		parsed = bsoup(page.content, 'html.parser')
@@ -124,6 +135,7 @@ def main():
 				stable = rawStable
 				devel = rawDevel
 
+
 				write2File()
 
 
@@ -140,6 +152,7 @@ def main():
 				post("Proton has update to version {}!\nCheck out the release here: {}".format(version, link))
 				
 				proton = version
+
 				write2File()
 		
 		if current == "dxvk":
@@ -155,6 +168,23 @@ def main():
 				post("DXVK has update to version {}!\nCheck out the release here: {}".format(version, link))
 
 				dxvk = version
+
+				write2File()
+
+		if current == "ge":
+			versions = [a['href'] for a in parsed.find_all(name="a", href=re.compile("releases/tag"))]
+			latest = versions[0]
+			link = gitURL + latest
+			version = latest.split("/")[-1]
+
+			if ge != version:
+				print("!!! Proton GE UPDATE DETECTED !!!")
+				print("--- From web -- \n\nLatest release: {}\n".format(version))
+				
+				post("Proton GE has update to version {}!\nCheck out the release here: {}".format(version, link))
+
+				ge = version
+
 				write2File()
 
 	else:
