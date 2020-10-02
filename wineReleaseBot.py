@@ -9,6 +9,7 @@ parser.add_argument('-d', '--debug', help="Debug mode: will not post to Twitter 
 args = parser.parse_args()
 
 debug = args.debug
+
 settingsConf = "settings.conf"
 stable = "0"
 devel = "0"
@@ -16,40 +17,49 @@ proton = "0"
 dxvk = "0"
 ge = "0"
 
+if debug:
+	class twitter:
+		def update_status(message):
+			print("Fake Twitter post: {}".format(message))
+	class mastodon:
+		def status_post(message):
+			print("Fake Mastodon post: {}".format(message))
+
+if not debug:
 # Remove this if you don't want Twitter support
-if os.path.isfile("twitter-auth.cred"):
-	with open("twitter-auth.cred", "r") as twitterAuth:
-		authCred = twitterAuth.readlines()
-		
-		TWITTER_CONSUMER_KEY = authCred[0].split(" ")[-1].strip("\n")
-		TWITTER_CONSUMER_SECRET = authCred[1].split(" ")[-1].strip("\n")
-		TWITTER_ACCESS_KEY = authCred[2].split(" ")[-1].strip("\n")
-		TWITTER_ACCESS_SECRET = authCred[3].split(" ")[-1].strip("\n")
-else:
-	print("Please create a twitter-auth.cred file with your Twitter API information!")
-	exit()
+	if os.path.isfile("twitter-auth.cred"):
+		with open("twitter-auth.cred", "r") as twitterAuth:
+			authCred = twitterAuth.readlines()
+			
+			TWITTER_CONSUMER_KEY = authCred[0].split(" ")[-1].strip("\n")
+			TWITTER_CONSUMER_SECRET = authCred[1].split(" ")[-1].strip("\n")
+			TWITTER_ACCESS_KEY = authCred[2].split(" ")[-1].strip("\n")
+			TWITTER_ACCESS_SECRET = authCred[3].split(" ")[-1].strip("\n")
+	else:
+		print("Please create a twitter-auth.cred file with your Twitter API information!")
+		exit()
 
 
-auth = tweepy.OAuthHandler(TWITTER_CONSUMER_KEY, TWITTER_CONSUMER_SECRET)
-auth.set_access_token(TWITTER_ACCESS_KEY, TWITTER_ACCESS_SECRET)
-twitter = tweepy.API(auth)
-# End Twitter remove
+	auth = tweepy.OAuthHandler(TWITTER_CONSUMER_KEY, TWITTER_CONSUMER_SECRET)
+	auth.set_access_token(TWITTER_ACCESS_KEY, TWITTER_ACCESS_SECRET)
+	twitter = tweepy.API(auth)
+	# End Twitter remove
 
-# Remove this if you don't want Mastodon support
-mastodonURL = "botsin.space"
-if os.path.isfile("mast-auth.cred"):
-	with open("mast-auth.cred", "r") as mastAuth:
-		authCred = mastAuth.readlines()
+	# Remove this if you don't want Mastodon support
+	mastodonURL = "botsin.space"
+	if os.path.isfile("mast-auth.cred"):
+		with open("mast-auth.cred", "r") as mastAuth:
+			authCred = mastAuth.readlines()
 
-		MAST_CONSUMER_KEY = authCred[0].split(" ")[-1].strip("\n")
-		MAST_CONSUMER_SECRET = authCred[1].split(" ")[-1].strip("\n")
-		MAST_ACCESS_KEY = authCred[2].split(" ")[-1].strip("\n")
-else:
-	print("Please create a mast-auth.cred file with your Mastodon API information!")
-	exit()
+			MAST_CONSUMER_KEY = authCred[0].split(" ")[-1].strip("\n")
+			MAST_CONSUMER_SECRET = authCred[1].split(" ")[-1].strip("\n")
+			MAST_ACCESS_KEY = authCred[2].split(" ")[-1].strip("\n")
+	else:
+		print("Please create a mast-auth.cred file with your Mastodon API information!")
+		exit()
 
-mastodon = Mastodon(client_id=MAST_CONSUMER_KEY, client_secret=MAST_CONSUMER_SECRET, access_token=MAST_ACCESS_KEY, api_base_url=mastodonURL)
-# End Mastodon remove
+	mastodon = Mastodon(client_id=MAST_CONSUMER_KEY, client_secret=MAST_CONSUMER_SECRET, access_token=MAST_ACCESS_KEY, api_base_url=mastodonURL)
+	# End Mastodon remove
 
 def versionCheck():
 	global stable, devel, proton, dxvk, ge
@@ -74,14 +84,13 @@ def versionCheck():
 		print("")
 
 def post(message):
-	if not debug:
-		print("Posting update to Twitter.")
-		twitter.update_status(message)
-		print("Updated to Twitter posted successfully.\n")
-		
-		print("Posting update to Mastodon.")
-		mastodon.status_post(message)
-		print("Updated to Mastodon successfully.\n")
+	print("Posting update to Twitter.")
+	twitter.update_status(message)
+	print("Updated to Twitter posted successfully.\n")
+	
+	print("Posting update to Mastodon.")
+	mastodon.status_post(message)
+	print("Updated to Mastodon successfully.\n")
 
 def write2File():
 	global stable, devel, proton, dxvk, ge
