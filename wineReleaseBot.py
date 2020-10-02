@@ -148,22 +148,28 @@ def write2File():
 	os.rename(settingsConf + ".new", settingsConf)
 	print("Written to file.\n")
 
+def getGithubInfo(project, url):
+	page = requests.get(url)
+	information = page.json()
+
+	latest = information[0]
+	directURL = latest['html_url']
+	release = latest['name']
+
+	return directURL, release
+
 def main():
 	global stable, devel, proton, dxvk, ge
-	# Get information from winehq website
-	URLs = ["https://www.winehq.org", "https://github.com/ValveSoftware/Proton/releases", "https://github.com/doitsujin/dxvk/releases", "https://github.com/GloriousEggroll/proton-ge-custom/releases"]
-	gitURL = "https://github.com"
-	URL = URLs[0]
-	for URL in URLs:
-		if URL == URLs[0]:
-			current = "wine"
-		elif URL == URLs[1]:
-			current = "proton"
-		elif URL == URLs[2]:
-			current = "dxvk"
-		elif URL == URLs[3]:
-			current = "ge"
+	# Get information from winehq website and github
+	URLs = {
+			"wine":	  "https://www.winehq.org",
+			"proton": "https://api.github.com/repos/ValveSoftware/Proton/releases",
+			"dxvk":   "https://api.github.com/repos/doitsujin/dxvk/releases",
+			"ge": 	  "https://api.github.com/repos/GloriousEggroll/proton-ge-custom/releases"
+			}
 
+	for current in URLs:
+		
 		page = requests.get(URL)
 		parsed = bsoup(page.content, 'html.parser')
 
@@ -193,7 +199,7 @@ def main():
 
 				write2File()
 
-
+		
 		if current == "proton":
 			versions = [a['href'] for a in parsed.find_all(name="a", href=re.compile("releases/tag"))]
 			latest = versions[0]
