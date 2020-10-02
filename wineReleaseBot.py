@@ -205,5 +205,4 @@ versionCheck()
 while True:
 	main()
 	print("Checked! Sleeping for 1 hour.\n")
-	time.sleep(1)
-        #time.sleep(60**2 * 0.999999)
+	time.sleep(60**2 * 0.999999)
