@@ -10,12 +10,44 @@ args = parser.parse_args()
 
 debug = args.debug
 
-settingsConf = "settings.conf"
+homeFolder = os.path.expanduser("~")
+settingsFolder = os.path.join(homeFolder, ".config/wrb")
+if not os.path.isdir(settingsFolder):
+	os.mkdir(settingsFolder)
+settingsConf = os.path.join(settingsFolder, "settings.conf")
+twitAuthFile = os.path.join(settingsFolder, "twitter-auth.cred")
+mastAuthFile = os.path.join(settingsFolder, "mast-auth.cred")
 stable = "0"
 devel = "0"
 proton = "0"
 dxvk = "0"
 ge = "0"
+
+def newSetup(platform):
+	if platform == "Twitter":
+		print("If you haven't already, please go to https://developer.twitter.com and get your App's keys and tokens.")
+		twit_con_key = input("Paste your API Key here > ").strip()
+		twit_con_sec = input("Paste your API Secret Key here > ").strip()
+		twit_acc_key = input("Paste your Access Token here > ").strip()
+		twit_acc_sec = input("Paste your Access Token Secret here >").strip()
+
+		print(f"This information is being written to {twitAuthFile}. Please wait.")
+		with open(twitAuthFile, 'w') as twitterAuth:
+			twitterAuth.write(f"API Key: {twit_con_key}\nAPI Secret: {twit_con_sec}\nAccess Key: {twit_acc_key}\nAccess Secret: {twit_acc_sec}")
+		time.sleep(5)
+		print(f"Data written to {twitAuthFile}. You are now ready to use the Twitter API!")
+
+	if platform == "Mastodon":
+		print("If you haven't already, please go to your Mastodon's instance and get your keys and tokens.")
+		mast_con_key = input("Paste your API Key here > ").strip()
+		mast_con_sec = input("Paste your API Secret Key here > ").strip()
+		mast_acc_key = input("Paste your Access Token here > ").strip()
+
+		print(f"This information is being written to {mastAuthFile}. Please wait.")
+		with open(mastAuthFile, 'w') as mastAuth:
+			mastAuth.write(f"API Key: {mast_con_key}\nAPI Secret: {mast_con_sec}\nAccess Key: {mast_acc_key}")
+		time.sleep(5)
+		print(f"Data written to {mastAuthFile}. You are now ready to use the Mastodon API!")
 
 if debug:
 	class twitter:
@@ -27,8 +59,8 @@ if debug:
 
 if not debug:
 # Remove this if you don't want Twitter support
-	if os.path.isfile("twitter-auth.cred"):
-		with open("twitter-auth.cred", "r") as twitterAuth:
+	if os.path.isfile(twitAuthFile):
+		with open(twitAuthFile, "r") as twitterAuth:
 			authCred = twitterAuth.readlines()
 			
 			TWITTER_CONSUMER_KEY = authCred[0].split(" ")[-1].strip("\n")
@@ -36,8 +68,15 @@ if not debug:
 			TWITTER_ACCESS_KEY = authCred[2].split(" ")[-1].strip("\n")
 			TWITTER_ACCESS_SECRET = authCred[3].split(" ")[-1].strip("\n")
 	else:
-		print("Please create a twitter-auth.cred file with your Twitter API information!")
-		exit()
+		print("A file with your Twitter API information does not exist!")
+		setup = input("Would you like to create one? [Y/n]")
+		affirmative = ["yes", "y", ""]
+		negative = ["no", "n"]
+		if setup.lower() in affirmative:
+			newSetup("Twitter")
+		if setup.lower() in negative:
+			print("Please comment out or remove the Twitter code.")
+			exit()
 
 
 	auth = tweepy.OAuthHandler(TWITTER_CONSUMER_KEY, TWITTER_CONSUMER_SECRET)
@@ -47,16 +86,23 @@ if not debug:
 
 	# Remove this if you don't want Mastodon support
 	mastodonURL = "botsin.space"
-	if os.path.isfile("mast-auth.cred"):
-		with open("mast-auth.cred", "r") as mastAuth:
+	if os.path.isfile(mastAuthFile):
+		with open(mastAuthFile, "r") as mastAuth:
 			authCred = mastAuth.readlines()
 
 			MAST_CONSUMER_KEY = authCred[0].split(" ")[-1].strip("\n")
 			MAST_CONSUMER_SECRET = authCred[1].split(" ")[-1].strip("\n")
 			MAST_ACCESS_KEY = authCred[2].split(" ")[-1].strip("\n")
 	else:
-		print("Please create a mast-auth.cred file with your Mastodon API information!")
-		exit()
+		print("A file with your Mastodon API information does not exist!")
+		setup = input("Would you like to create one? [Y/n]")
+		affirmative = ["yes", "y", ""]
+		negative = ["no", "n"]
+		if setup.lower() in affirmative:
+			newSetup("Mastodon")
+		if setup.lower() in negative:
+			print("Please comment out or remove the Mastodon code.")
+			exit()
 
 	mastodon = Mastodon(client_id=MAST_CONSUMER_KEY, client_secret=MAST_CONSUMER_SECRET, access_token=MAST_ACCESS_KEY, api_base_url=mastodonURL)
 	# End Mastodon remove
