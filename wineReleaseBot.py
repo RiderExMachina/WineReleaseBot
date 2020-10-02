@@ -162,10 +162,10 @@ def main():
 	global stable, devel, proton, dxvk, ge
 	# Get information from winehq website and github
 	URLs = {
-			"wine":	  "https://www.winehq.org",
-			"proton": "https://api.github.com/repos/ValveSoftware/Proton/releases",
-			"dxvk":   "https://api.github.com/repos/doitsujin/dxvk/releases",
-			"ge": 	  "https://api.github.com/repos/GloriousEggroll/proton-ge-custom/releases"
+			"Wine":	  "https://www.winehq.org",
+			"Proton": "https://api.github.com/repos/ValveSoftware/Proton/releases",
+			"DXVK":   "https://api.github.com/repos/doitsujin/dxvk/releases",
+			"GE": 	  "https://api.github.com/repos/GloriousEggroll/proton-ge-custom/releases"
 			}
 
 	for current in URLs:
@@ -173,33 +173,33 @@ def main():
 		page = requests.get(URL)
 		parsed = bsoup(page.content, 'html.parser')
 
-		if current == "wine":
+		if current.lower() == "wine":
 			# Look for anything with "/announce/" in the href. We can then just look at the first two in the list.
 			versions = [a['href'] for a in parsed.find_all(name="a", href=re.compile("/announce/"))]
 
-			rawStable = versions[0].split("/")[-1]
-			rawDevel = versions[1].split("/")[-1]
+			newStable = versions[0].split("/")[-1]
+			newDevel = versions[1].split("/")[-1]
 
-			if stable != rawStable or devel != rawDevel:
+			if stable != newStable or devel != newDevel:
 				print("!!! WINE UPDATE DETECTED! !!!")
-				print("--- From web --- \n\nStable release: {} \nDevelopment release: {}\n".format(rawStable, rawDevel))
+				print("--- From web --- \n\nStable release: {} \nDevelopment release: {}\n".format(newStable, newDevel))
 				print("Writing to configuration file.")
 				
-				if stable != rawStable and devel == rawDevel:
-					post("WINE Stable has updated to version {}!\nCheck the release notes here: {}".format(rawStable, URL+versions[0]))
+				if stable != newStable and devel == newDevel:
+					post("WINE Stable has updated to version {}!\nCheck the release notes here: {}".format(newStable, URL+versions[0]))
 					
-				elif stable == rawStable and devel != rawDevel:
-					post("WINE Development has updated to version {}!\nCheck the release notes here: {}".format(rawDevel, URL+versions[1]))
+				elif stable == newStable and devel != newDevel:
+					post("WINE Development has updated to version {}!\nCheck the release notes here: {}".format(newDevel, URL+versions[1]))
 
 				else:
-					post("WINE Stable has updated to version {} and WINE Development has updated to version {}!\nCheck the release notes here: \n{} (Stable)\n{} (Development)".format(rawStable, rawDevel, URL+versions[0], URL+versions[1]))
-				stable = rawStable
-				devel = rawDevel
+					post("WINE Stable has updated to version {} and WINE Development has updated to version {}!\nCheck the release notes here: \n{} (Stable)\n{} (Development)".format(newStable, newDevel, URL+versions[0], URL+versions[1]))
+				stable = newStable
+				devel = newDevel
 
 
 				write2File()
 
-		
+
 		if current == "proton":
 			versions = [a['href'] for a in parsed.find_all(name="a", href=re.compile("releases/tag"))]
 			latest = versions[0]
