@@ -160,6 +160,7 @@ def getGithubInfo(project, url):
 
 def main():
 	global stable, devel, proton, dxvk, ge
+
 	# Get information from winehq website and github
 	URLs = {
 			"Wine":	  "https://www.winehq.org",
@@ -218,7 +219,6 @@ def main():
 	else:
 		print("No update detected.")
 	
-
 versionCheck()
 
 while True:
