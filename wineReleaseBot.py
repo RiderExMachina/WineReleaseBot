@@ -148,26 +148,32 @@ def write2File():
 	os.rename(settingsConf + ".new", settingsConf)
 	print("Written to file.\n")
 
+def getGithubInfo(project, url):
+	page = requests.get(url)
+	information = page.json()
+
+	latest = information[0]
+	directURL = latest['html_url']
+	release = latest['name'].split(" ")[-1]
+
+	return directURL, release
+
 def main():
 	global stable, devel, proton, dxvk, ge
-	# Get information from winehq website
-	URLs = ["https://www.winehq.org", "https://github.com/ValveSoftware/Proton/releases", "https://github.com/doitsujin/dxvk/releases", "https://github.com/GloriousEggroll/proton-ge-custom/releases"]
-	gitURL = "https://github.com"
-	URL = URLs[0]
-	for URL in URLs:
-		if URL == URLs[0]:
-			current = "wine"
-		elif URL == URLs[1]:
-			current = "proton"
-		elif URL == URLs[2]:
-			current = "dxvk"
-		elif URL == URLs[3]:
-			current = "ge"
 
-		page = requests.get(URL)
-		parsed = bsoup(page.content, 'html.parser')
+	# Get information from winehq website and github
+	URLs = {
+			"Wine":	  "https://www.winehq.org",
+			"Proton": "https://api.github.com/repos/ValveSoftware/Proton/releases",
+			"DXVK":   "https://api.github.com/repos/doitsujin/dxvk/releases",
+			"GE": 	  "https://api.github.com/repos/GloriousEggroll/proton-ge-custom/releases"
+			}
+
+	for current in URLs:
 
 		if current.lower() == "wine":
+			page = requests.get(URLs[current])
+			parsed = bsoup(page.content, 'html.parser')
 			# Look for anything with "/announce/" in the href. We can then just look at the first two in the list.
 			versions = [a['href'] for a in parsed.find_all(name="a", href=re.compile("/announce/"))]
 
@@ -190,62 +196,29 @@ def main():
 				stable = newStable
 				devel = newDevel
 
-
 				write2File()
 
 
-		if current == "proton":
-			versions = [a['href'] for a in parsed.find_all(name="a", href=re.compile("releases/tag"))]
-			latest = versions[0]
-			link = gitURL + latest
-			version = latest.split("/")[-1].replace("proton-", "")
+		if current.lower() != "wine":
+			link, release = getGithubInfo(current, URLs[current])
 
-			if proton != version:
-				print("!!! PROTON UPDATE DETECTED !!!")
-				print("--- From web -- \n\nLatest release: {}\n".format(version))
+			if eval(current.lower()) != release:
+				print(f"!!! {current.upper()} UPDATE DETECTED !!!")
+				print("--- From web -- \n\nLatest release: {}\n".format(release))
 				
-				post("Proton has update to version {}!\nCheck out the release here: {}".format(version, link))
+				post(f"{current} has updated to release {release}!\nCheck out the release here: {link}")
 				
-				proton = version
+				if current == "Proton":
+					proton = release
+				elif current == "DXVK":
+					dxvk = release
+				elif current == "GE":
+					ge = release
 
 				write2File()
-		
-		if current == "dxvk":
-			versions = [a['href'] for a in parsed.find_all(name="a", href=re.compile("releases/tag"))]
-			latest = versions[0]
-			link = gitURL + latest
-			version = latest.split("/")[-1].replace("v", "")
-
-			if dxvk != version:
-				print("!!! DXVK UPDATE DETECTED !!!")
-				print("--- From web -- \n\nLatest release: {}\n".format(version))
-				
-				post("DXVK has update to version {}!\nCheck out the release here: {}".format(version, link))
-
-				dxvk = version
-
-				write2File()
-
-		if current == "ge":
-			versions = [a['href'] for a in parsed.find_all(name="a", href=re.compile("releases/tag"))]
-			latest = versions[0]
-			link = gitURL + latest
-			version = latest.split("/")[-1]
-
-			if ge != version:
-				print("!!! Proton GE UPDATE DETECTED !!!")
-				print("--- From web -- \n\nLatest release: {}\n".format(version))
-				
-				post("Proton GE has update to version {}!\nCheck out the release here: {}".format(version, link))
-
-				ge = version
-
-				write2File()
-
 	else:
 		print("No update detected.")
 	
-
 versionCheck()
 
 while True:
