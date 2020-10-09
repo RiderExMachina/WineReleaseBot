@@ -10,6 +10,7 @@ args = parser.parse_args()
 
 debug = args.debug
 
+os.system("")
 homeFolder = os.path.expanduser("~")
 settingsFolder = os.path.join(homeFolder, ".config/wrb")
 if not os.path.isdir(settingsFolder):
@@ -22,6 +23,14 @@ devel = "0"
 proton = "0"
 dxvk = "0"
 ge = "0"
+
+class style():
+	RED = '\033[31m'
+	GREEN = '\033[32m'
+	YELLOW = '\033[33m'
+	BLUE = '\033[34m'
+	CYAN = '\033[36m'
+	RESET = '\033[0m'
 
 def newSetup(platform):
 	if platform == "Twitter":
@@ -68,14 +77,14 @@ if not debug:
 			TWITTER_ACCESS_KEY = authCred[2].split(" ")[-1].strip("\n")
 			TWITTER_ACCESS_SECRET = authCred[3].split(" ")[-1].strip("\n")
 	else:
-		print("A file with your Twitter API information does not exist!")
-		setup = input("Would you like to create one? [Y/n]")
+		print(f"{style.RED}A file with your Twitter API information does not exist!{style.RESET}")
+		setup = input(f"Would you like to create one? [{style.GREEN}Y{style.RESET}/{style.RED}n{style.RESET}]")
 		affirmative = ["yes", "y", ""]
 		negative = ["no", "n"]
 		if setup.lower() in affirmative:
 			newSetup("Twitter")
 		if setup.lower() in negative:
-			print("Please comment out or remove the Twitter code.")
+			print(f"{style.YELLOW}Please comment out or remove the Twitter code.{style.RESET}")
 			exit()
 
 
@@ -94,14 +103,14 @@ if not debug:
 			MAST_CONSUMER_SECRET = authCred[1].split(" ")[-1].strip("\n")
 			MAST_ACCESS_KEY = authCred[2].split(" ")[-1].strip("\n")
 	else:
-		print("A file with your Mastodon API information does not exist!")
-		setup = input("Would you like to create one? [Y/n]")
+		print(f"{style.RED}A file with your Mastodon API information does not exist!{style.RESET}")
+		setup = input(f"Would you like to create one? [{style.GREEN}Y{style.RESET}/{style.RED}n{style.RESET}]")
 		affirmative = ["yes", "y", ""]
 		negative = ["no", "n"]
 		if setup.lower() in affirmative:
 			newSetup("Mastodon")
 		if setup.lower() in negative:
-			print("Please comment out or remove the Mastodon code.")
+			print(f"{style.YELLOW}Please comment out or remove the Mastodon code.{style.RESET}")
 			exit()
 
 	mastodon = Mastodon(client_id=MAST_CONSUMER_KEY, client_secret=MAST_CONSUMER_SECRET, access_token=MAST_ACCESS_KEY, api_base_url=mastodonURL)
@@ -130,13 +139,13 @@ def versionCheck():
 		print("")
 
 def post(message):
-	print("Posting update to Twitter.")
+	print(f"{style.CYAN}Posting update to Twitter.{style.RESET}")
 	twitter.update_status(message)
-	print("Updated to Twitter posted successfully.\n")
+	print(f"{style.GREEN}Updated to Twitter posted successfully.\n{style.RESET}")
 	
-	print("Posting update to Mastodon.")
+	print(f"{style.BLUE}Posting update to Mastodon.{style.RESET}")
 	mastodon.status_post(message)
-	print("Updated to Mastodon successfully.\n")
+	print(f"{style.GREEN}Updated to Mastodon successfully.\n{style.RESET}")
 
 def write2File():
 	global stable, devel, proton, dxvk, ge
@@ -181,7 +190,7 @@ def main():
 			newDevel = versions[1].split("/")[-1]
 
 			if stable != newStable or devel != newDevel:
-				print("!!! WINE UPDATE DETECTED! !!!")
+				print(f"!!! {style.RED}WINE{style.RESET} {style.YELLOW}UPDATE DETECTED!{style.RESET} !!!")
 				print("--- From web --- \n\nStable release: {} \nDevelopment release: {}\n".format(newStable, newDevel))
 				print("Writing to configuration file.")
 				
@@ -203,7 +212,7 @@ def main():
 			link, release = getGithubInfo(current, URLs[current])
 
 			if eval(current.lower()) != release:
-				print(f"!!! {current.upper()} UPDATE DETECTED !!!")
+				print(f"!!! {style.YELLOW}{current.upper()} UPDATE DETECTED!{style.RESET} !!!")
 				print("--- From web -- \n\nLatest release: {}\n".format(release))
 				
 				post(f"{current} has updated to release {release}!\nCheck out the release here: {link}")
