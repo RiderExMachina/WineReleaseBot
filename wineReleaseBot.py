@@ -11,8 +11,7 @@ args = parser.parse_args()
 debug = args.debug
 
 os.system("")
-homeFolder = os.path.expanduser("~")
-settingsFolder = os.path.join(homeFolder, ".config/wrb")
+settingsFolder = os.path.join(homeFolder, "/etc/wrb")
 if not os.path.isdir(settingsFolder):
 	os.mkdir(settingsFolder)
 settingsConf = os.path.join(settingsFolder, "settings.conf")
@@ -163,7 +162,7 @@ def getGithubInfo(project, url):
 
 	latest = information[0]
 	directURL = latest['html_url']
-	release = latest['name'].split(" ")[-1]
+	release = latest['tag_name'].split(" ")[-1]
 
 	return directURL, release
 
@@ -195,13 +194,13 @@ def main():
 				print("Writing to configuration file.")
 				
 				if stable != newStable and devel == newDevel:
-					post("WINE Stable has updated to version {}!\nCheck the release notes here: {}".format(newStable, URL+versions[0]))
+					post("WINE Stable has updated to version {}!\nCheck the release notes here: {}".format(newStable, URLs[current]+versions[0]))
 					
 				elif stable == newStable and devel != newDevel:
-					post("WINE Development has updated to version {}!\nCheck the release notes here: {}".format(newDevel, URL+versions[1]))
+					post("WINE Development has updated to version {}!\nCheck the release notes here: {}".format(newDevel, URLs[current]+versions[1]))
 
 				else:
-					post("WINE Stable has updated to version {} and WINE Development has updated to version {}!\nCheck the release notes here: \n{} (Stable)\n{} (Development)".format(newStable, newDevel, URL+versions[0], URL+versions[1]))
+					post("WINE Stable has updated to version {} and WINE Development has updated to version {}!\nCheck the release notes here: \n{} (Stable)\n{} (Development)".format(newStable, newDevel, URLs[current]+versions[0], URLs[current]+versions[1]))
 				stable = newStable
 				devel = newDevel
 
