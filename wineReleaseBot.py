@@ -11,7 +11,7 @@ args = parser.parse_args()
 debug = args.debug
 
 os.system("")
-settingsFolder = os.path.join(homeFolder, "/etc/wrb")
+settingsFolder = ("/etc/wrb")
 if not os.path.isdir(settingsFolder):
 	os.mkdir(settingsFolder)
 settingsConf = os.path.join(settingsFolder, "settings.conf")
