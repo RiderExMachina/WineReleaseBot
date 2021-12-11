@@ -2,7 +2,7 @@
 
 from bs4 import BeautifulSoup as bsoup
 from mastodon import Mastodon
-import requests, re, time, os, tweepy, argparse
+import requests, re, time, os, tweepy, argparse, json
 
 parser = argparse.ArgumentParser()
 parser.add_argument('-d', '--debug', help="Debug mode: will not post to Twitter or Mastodon", default=False, action='store_true')
@@ -15,8 +15,7 @@ settingsFolder = ("/etc/wrb")
 if not os.path.isdir(settingsFolder):
 	os.mkdir(settingsFolder)
 settingsConf = os.path.join(settingsFolder, "settings.conf")
-twitAuthFile = os.path.join(settingsFolder, "twitter-auth.cred")
-mastAuthFile = os.path.join(settingsFolder, "mast-auth.cred")
+authFile = os.path.join(settingsFolder, "auth.cred")
 stable = "0"
 devel = "0"
 proton = "0"
@@ -66,15 +65,15 @@ if debug:
 			print("Fake Mastodon post: {}".format(message))
 
 if not debug:
+	authFile = 
 # Remove this if you don't want Twitter support
-	if os.path.isfile(twitAuthFile):
-		with open(twitAuthFile, "r") as twitterAuth:
-			authCred = twitterAuth.readlines()
-			
-			TWITTER_CONSUMER_KEY = authCred[0].split(" ")[-1].strip("\n")
-			TWITTER_CONSUMER_SECRET = authCred[1].split(" ")[-1].strip("\n")
-			TWITTER_ACCESS_KEY = authCred[2].split(" ")[-1].strip("\n")
-			TWITTER_ACCESS_SECRET = authCred[3].split(" ")[-1].strip("\n")
+	if os.path.isfile(authFile):
+		with open(authFile, "r") as Auth:
+			if json.load(Auth)["twitter"]:	
+				TWITTER_CONSUMER_KEY = json.load(Auth)["twit_api_key"]
+				TWITTER_CONSUMER_SECRET = json.load(Auth)["twit_api_secret"]
+				TWITTER_ACCESS_KEY = json.load(Auth)["twit_access_key"]
+				TWITTER_ACCESS_SECRET = json.load(Auth)["twit_access_secret"]
 	else:
 		print(f"{style.RED}A file with your Twitter API information does not exist!{style.RESET}")
 		setup = input(f"Would you like to create one? [{style.GREEN}Y{style.RESET}/{style.RED}n{style.RESET}]")
@@ -94,13 +93,12 @@ if not debug:
 
 	# Remove this if you don't want Mastodon support
 	mastodonURL = "botsin.space"
-	if os.path.isfile(mastAuthFile):
-		with open(mastAuthFile, "r") as mastAuth:
-			authCred = mastAuth.readlines()
-
-			MAST_CONSUMER_KEY = authCred[0].split(" ")[-1].strip("\n")
-			MAST_CONSUMER_SECRET = authCred[1].split(" ")[-1].strip("\n")
-			MAST_ACCESS_KEY = authCred[2].split(" ")[-1].strip("\n")
+	if os.path.isfile(authFile):
+		with open(authFile, "r") as Auth:
+			if json.load(Auth)["mastodon"]:	
+				MAST_CONSUMER_KEY = json.load(Auth)["mast_api_key"]
+				MAST_CONSUMER_SECRET = json.load(Auth)["mast_api_secret"]
+				MAST_ACCESS_KEY = json.load(Auth)["mast_access_key"]
 	else:
 		print(f"{style.RED}A file with your Mastodon API information does not exist!{style.RESET}")
 		setup = input(f"Would you like to create one? [{style.GREEN}Y{style.RESET}/{style.RED}n{style.RESET}]")
@@ -119,23 +117,26 @@ def versionCheck():
 	global stable, devel, proton, dxvk, ge
 	if os.path.isfile(settingsConf):
 		with open(settingsConf, "r") as settingsFile:
-			settings = settingsFile.readlines()
+			#settings = settingsFile.readlines()
+			settings = json.load(settingsFile)
 
-			for line in settings:
-				if line.startswith("Stable"):
-					stable = line.split(" ")[-1].strip("\n")
-				elif line.startswith("Development"):
-					devel = line.split(" ")[-1].strip("\n")
-				elif line.startswith("Proton"):
-					proton = line.split(" ")[-1].strip("\n")
-				elif line.startswith("DXVK"):
-					dxvk = line.split(" ")[-1].strip("\n")
-				elif line.startswith("GE"):
-					ge = line.split(" ")[-1].strip("\n")
+			stable = settings["Stable"]
+			devel = settings["Development"]
+			proton = settings["Proton"]
+			dxvk = settings["DXVK"]
+			#for line in settings:
+			#	if line.startswith("Stable"):
+			#		stable = line.split(" ")[-1].strip("\n")
+			#	elif line.startswith("Development"):
+			#		devel = line.split(" ")[-1].strip("\n")
+			#	elif line.startswith("Proton"):
+			#		proton = line.split(" ")[-1].strip("\n")
+			#	elif line.startswith("DXVK"):
+			#		dxvk = line.split(" ")[-1].strip("\n")
+			#	elif line.startswith("GE"):
+			#		ge = line.split(" ")[-1].strip("\n")
 		print("--- From file ---")
-		for line in settings:
-			print(line.replace("\n", ""))
-		print("")
+		print(f"Wine Stable:\t{stable}\nWine Devel:\t{devel}\nProton:\t{proton}\nDXVK:\t{dxvk}\n")
 
 def post(message):
 	print(f"{style.CYAN}Posting update to Twitter.{style.RESET}")
@@ -151,7 +152,7 @@ def write2File():
 
 	print("Writing to configuration file...")
 	with open(settingsConf + ".new", "w") as newSettings:
-		newSettings.write("Stable: {}\nDevelopment: {}\nProton: {}\nDXVK: {}\nGE: {}".format(stable, devel, proton, dxvk, ge))
+		json.dump()
 
 	os.rename(settingsConf + ".new", settingsConf)
 	print("Written to file.\n")

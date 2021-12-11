@@ -1,0 +1,12 @@
+{
+    "twitter": true,
+    "twit_api_key": "deadbeef98174...",
+    "twit_api_secret": "baebee9128ad...",
+    "twit_access_key": "093487961324...",
+    "twit_acces_secret": "96821defbead...",
+
+    "mastodon": true,
+    "mast_api_key": "deadbeef98174...",
+    "mast_api_secret": "baebee9128ad...",
+    "mast_access_key": "093487961324..."
+}
