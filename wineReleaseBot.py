@@ -124,6 +124,7 @@ def versionCheck():
 			devel = settings["Development"]
 			proton = settings["Proton"]
 			dxvk = settings["DXVK"]
+			de = settings["GE"]
 			#for line in settings:
 			#	if line.startswith("Stable"):
 			#		stable = line.split(" ")[-1].strip("\n")
@@ -152,7 +153,8 @@ def write2File():
 
 	print("Writing to configuration file...")
 	with open(settingsConf + ".new", "w") as newSettings:
-		json.dump()
+		info = {"Stable":stable, "Development":devel, "Proton": proton, "DXVK": dxvk, "GE": ge}
+		json.dump(info, newSettings)
 
 	os.rename(settingsConf + ".new", settingsConf)
 	print("Written to file.\n")
@@ -163,8 +165,8 @@ def getGithubInfo(project, url):
 
 	latest = information[0]
 	directURL = latest['html_url']
-	release = latest['tag_name'].split(" ")[-1]
-
+	release = latest['tag_name']
+	
 	return directURL, release
 
 def main():
