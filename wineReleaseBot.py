@@ -65,7 +65,6 @@ if debug:
 			print("Fake Mastodon post: {}".format(message))
 
 if not debug:
-	authFile = 
 # Remove this if you don't want Twitter support
 	if os.path.isfile(authFile):
 		with open(authFile, "r") as Auth:
@@ -124,7 +123,7 @@ def versionCheck():
 			devel = settings["Development"]
 			proton = settings["Proton"]
 			dxvk = settings["DXVK"]
-			de = settings["GE"]
+			ge = settings["GE"]
 			#for line in settings:
 			#	if line.startswith("Stable"):
 			#		stable = line.split(" ")[-1].strip("\n")
@@ -137,7 +136,7 @@ def versionCheck():
 			#	elif line.startswith("GE"):
 			#		ge = line.split(" ")[-1].strip("\n")
 		print("--- From file ---")
-		print(f"Wine Stable:\t{stable}\nWine Devel:\t{devel}\nProton:\t{proton}\nDXVK:\t{dxvk}\n")
+		print(f"Wine Stable:\t{stable}\nWine Devel:\t{devel}\nProton:\t{proton}\nDXVK:\t{dxvk}\nGE:\t{ge}\n")
 
 def post(message):
 	print(f"{style.CYAN}Posting update to Twitter.{style.RESET}")
@@ -166,7 +165,7 @@ def getGithubInfo(project, url):
 	latest = information[0]
 	directURL = latest['html_url']
 	release = latest['tag_name']
-	
+
 	return directURL, release
 
 def main():
