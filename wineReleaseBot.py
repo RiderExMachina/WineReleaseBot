@@ -106,12 +106,12 @@ if not debug:
 	if os.path.isfile(authFile):
 		with open(authFile, "r") as Auth:
 			mast_info = json.load(Auth)["mastodon"]
-			print("Found")
+			print("Found.")
 			for info in mast_info:	
 				MAST_CONSUMER_KEY = info["mast_api_key"]
 				MAST_CONSUMER_SECRET = info["mast_api_secret"]
 				MAST_ACCESS_KEY = info["mast_access_key"]
-		print("Mastodon information loaded")
+		print("Mastodon information loaded successfully.")
 	else:
 		print(f"{style.RED}A file with your Mastodon API information does not exist!{style.RESET}")
 		setup = input(f"Would you like to create one? [{style.GREEN}Y{style.RESET}/{style.RED}n{style.RESET}]")
