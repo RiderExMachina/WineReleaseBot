@@ -11,12 +11,21 @@ args = parser.parse_args()
 debug = args.debug
 
 os.system("")
-## rewrite for only when run as root
-#settingsFolder = "/etc/wrb"
-settingsFolder = "."
+user = os.geteuid()
+if user == 0:
+	settingsFolder = "/etc/wrb"
+	print(f"Probably installed. Setting {settingsFolder} as settingsFolder")
+else:
+	if os.path.isdir(".git"):
+		settingsFolder = "."
+		print(f"Git version detected, setting {settingsFolder} as settingsFolder")
+	else:
+		home_folder = os.path.expanduser("~")
+		settingsFolder = os.path.join(home_folder, ".config/wrb")
+		print(f"Probably installed. Setting {settingsFolder} as settingsFolder")
 
-#if not os.path.isdir(settingsFolder):
-#	os.mkdir(settingsFolder)
+if not os.path.isdir(settingsFolder):
+	os.mkdir(settingsFolder)
 settingsConf = os.path.join(settingsFolder, "settings.conf")
 authFile = os.path.join(settingsFolder, "auth.cred")
 stable = "0"
