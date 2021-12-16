@@ -11,9 +11,12 @@ args = parser.parse_args()
 debug = args.debug
 
 os.system("")
-settingsFolder = ("/etc/wrb")
-if not os.path.isdir(settingsFolder):
-	os.mkdir(settingsFolder)
+## rewrite for only when run as root
+#settingsFolder = "/etc/wrb"
+settingsFolder = "."
+
+#if not os.path.isdir(settingsFolder):
+#	os.mkdir(settingsFolder)
 settingsConf = os.path.join(settingsFolder, "settings.conf")
 authFile = os.path.join(settingsFolder, "auth.cred")
 stable = "0"
@@ -38,11 +41,12 @@ def newSetup(platform):
 		twit_acc_key = input("Paste your Access Token here > ").strip()
 		twit_acc_sec = input("Paste your Access Token Secret here >").strip()
 
-		print(f"This information is being written to {twitAuthFile}. Please wait.")
-		with open(twitAuthFile, 'w') as twitterAuth:
-			twitterAuth.write(f"API Key: {twit_con_key}\nAPI Secret: {twit_con_sec}\nAccess Key: {twit_acc_key}\nAccess Secret: {twit_acc_sec}")
+		print(f"This information is being written to {authFile}. Please wait.")
+		with open(authFile, 'a') as twitterAuth:
+			twitInfo = {"twitter": [{"twit_api_key": twit_con_key, "twit_api_sec": twit_con_sec, "twit_access_key": twit_acc_key, "twit_access_secret": twit_acc_sec}]}
+			json.dumps(twitInfo, twitterAuth, indent=4)
 		time.sleep(5)
-		print(f"Data written to {twitAuthFile}. You are now ready to use the Twitter API!")
+		print(f"Data written to {authFile}. You are now ready to use the Twitter API!")
 
 	if platform == "Mastodon":
 		print("If you haven't already, please go to your Mastodon's instance and get your keys and tokens.")
@@ -50,9 +54,10 @@ def newSetup(platform):
 		mast_con_sec = input("Paste your API Secret Key here > ").strip()
 		mast_acc_key = input("Paste your Access Token here > ").strip()
 
-		print(f"This information is being written to {mastAuthFile}. Please wait.")
-		with open(mastAuthFile, 'w') as mastAuth:
-			mastAuth.write(f"API Key: {mast_con_key}\nAPI Secret: {mast_con_sec}\nAccess Key: {mast_acc_key}")
+		print(f"This information is being written to {authFile}. Please wait.")
+		with open(authFile, 'a') as mastAuth:
+			mastInfo = {"mastodon": [{"mast_api_key": mast_con_key, "mast_api_secret": mast_con_sec, "mast_access_key": mast_acc_key}]}
+			json.dump(mastInfo, mastAuth, indent=4)
 		time.sleep(5)
 		print(f"Data written to {mastAuthFile}. You are now ready to use the Mastodon API!")
 
@@ -66,13 +71,18 @@ if debug:
 
 if not debug:
 # Remove this if you don't want Twitter support
+	print(f"Looking for Twitter information...")
 	if os.path.isfile(authFile):
 		with open(authFile, "r") as Auth:
-			if json.load(Auth)["twitter"]:	
-				TWITTER_CONSUMER_KEY = json.load(Auth)["twit_api_key"]
-				TWITTER_CONSUMER_SECRET = json.load(Auth)["twit_api_secret"]
-				TWITTER_ACCESS_KEY = json.load(Auth)["twit_access_key"]
-				TWITTER_ACCESS_SECRET = json.load(Auth)["twit_access_secret"]
+			twit_info = json.load(Auth)["twitter"]
+			print("Found.")
+			for info in twit_info:
+				TWITTER_CONSUMER_KEY = info["twit_api_key"]
+				TWITTER_CONSUMER_SECRET = info["twit_api_secret"]
+				TWITTER_ACCESS_KEY = info["twit_access_key"]
+				TWITTER_ACCESS_SECRET = info["twit_access_secret"]
+		print("Twitter information loaded successfully.")
+			
 	else:
 		print(f"{style.RED}A file with your Twitter API information does not exist!{style.RESET}")
 		setup = input(f"Would you like to create one? [{style.GREEN}Y{style.RESET}/{style.RED}n{style.RESET}]")
@@ -92,12 +102,16 @@ if not debug:
 
 	# Remove this if you don't want Mastodon support
 	mastodonURL = "botsin.space"
+	print("Looking for Mastodon information...")
 	if os.path.isfile(authFile):
 		with open(authFile, "r") as Auth:
-			if json.load(Auth)["mastodon"]:	
-				MAST_CONSUMER_KEY = json.load(Auth)["mast_api_key"]
-				MAST_CONSUMER_SECRET = json.load(Auth)["mast_api_secret"]
-				MAST_ACCESS_KEY = json.load(Auth)["mast_access_key"]
+			mast_info = json.load(Auth)["mastodon"]
+			print("Found")
+			for info in mast_info:	
+				MAST_CONSUMER_KEY = info["mast_api_key"]
+				MAST_CONSUMER_SECRET = info["mast_api_secret"]
+				MAST_ACCESS_KEY = info["mast_access_key"]
+		print("Mastodon information loaded")
 	else:
 		print(f"{style.RED}A file with your Mastodon API information does not exist!{style.RESET}")
 		setup = input(f"Would you like to create one? [{style.GREEN}Y{style.RESET}/{style.RED}n{style.RESET}]")
@@ -114,9 +128,9 @@ if not debug:
 
 def versionCheck():
 	global stable, devel, proton, dxvk, ge
+	print("Checking cached versions of software...")
 	if os.path.isfile(settingsConf):
 		with open(settingsConf, "r") as settingsFile:
-			#settings = settingsFile.readlines()
 			settings = json.load(settingsFile)
 
 			stable = settings["Stable"]
@@ -124,17 +138,7 @@ def versionCheck():
 			proton = settings["Proton"]
 			dxvk = settings["DXVK"]
 			ge = settings["GE"]
-			#for line in settings:
-			#	if line.startswith("Stable"):
-			#		stable = line.split(" ")[-1].strip("\n")
-			#	elif line.startswith("Development"):
-			#		devel = line.split(" ")[-1].strip("\n")
-			#	elif line.startswith("Proton"):
-			#		proton = line.split(" ")[-1].strip("\n")
-			#	elif line.startswith("DXVK"):
-			#		dxvk = line.split(" ")[-1].strip("\n")
-			#	elif line.startswith("GE"):
-			#		ge = line.split(" ")[-1].strip("\n")
+
 		print("--- From file ---")
 		print(f"Wine Stable:\t{stable}\nWine Devel:\t{devel}\nProton:\t{proton}\nDXVK:\t{dxvk}\nGE:\t{ge}\n")
 
@@ -153,7 +157,7 @@ def write2File():
 	print("Writing to configuration file...")
 	with open(settingsConf + ".new", "w") as newSettings:
 		info = {"Stable":stable, "Development":devel, "Proton": proton, "DXVK": dxvk, "GE": ge}
-		json.dump(info, newSettings)
+		json.dumps(info, newSettings, indent=4)
 
 	os.rename(settingsConf + ".new", settingsConf)
 	print("Written to file.\n")
