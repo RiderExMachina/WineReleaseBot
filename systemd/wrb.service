@@ -1,0 +1,9 @@
+[Unit]
+Description=Wine Releases Twitter Bot
+
+[Service]
+Type=simple
+ExecStart="python3 /opt/wrb/WineReleaseBot.py"
+
+[Install]
+Alias=winereleasebot.service
