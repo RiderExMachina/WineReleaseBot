@@ -22,7 +22,7 @@ else:
 		home_folder = os.path.expanduser("~")
 		settingsFolder = os.path.join(home_folder, ".config/wrb")
 
-logging.basicConfig(filename=f"{settingsFolder}/wrb.log")
+logging.basicConfig(filename=f"{settingsFolder}/wrb.log", encoding="utf-8", level=logging.DEBUG)
 def relay(msg):
 	logging.debug(msg)
 	print(msg)
