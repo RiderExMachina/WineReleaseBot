@@ -3,7 +3,7 @@ Description=Wine Releases Twitter Bot
 
 [Service]
 Type=simple
-ExecStart="python3 /opt/wrb/WineReleaseBot.py"
+ExecStart=/usr/bin/python3 /opt/wrb/wineReleaseBot.py
 
 [Install]
 Alias=winereleasebot.service
