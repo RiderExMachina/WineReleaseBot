@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
-import requests, re, time, os, argparse, json
-import logging
-
+import requests, re, time, os, argparse, json, logging, datetime
+## Create aruments for debug and setup. Could potentially make more, like -m or -t for desired platforms to post to.
 parser = argparse.ArgumentParser()
 parser.add_argument('-d', '--debug', help="Debug mode: will not post to Twitter or Mastodon", default=False, action='store_true')
 parser.add_argument('-s', '--setup', help="Install prerequisites to make sure everything is good to go.", default=False, action='store_true')
@@ -9,8 +8,7 @@ args = parser.parse_args()
 
 debug = args.debug
 setup = args.setup
-
-os.system("")
+## Set global folders for config and log files. I know, the log files are not in /var/log or ~/.cache, I may fix this later
 user = os.geteuid()
 if user == 0:
 	settingsFolder = "/etc/wrb"
@@ -21,8 +19,10 @@ else:
 	else:
 		home_folder = os.path.expanduser("~")
 		settingsFolder = os.path.join(home_folder, ".config/wrb")
-
-logging.basicConfig(filename=f"{settingsFolder}/wrb.log", encoding="utf-8", level=logging.DEBUG)
+## Set up logging
+## TODO: change log file to include month/year
+## TODO: make log folder delete old logs
+logging.basicConfig(filename=f"{settingsFolder}/wrb-{datetime.datetime.now().strftime('%B-%Y')}.log", encoding="utf-8", level=logging.DEBUG)
 def relay(msg):
 	logging.debug(msg)
 	print(msg)
@@ -30,22 +30,23 @@ def relay(msg):
 relay(f"Setting {settingsFolder} as settingsFolder.")
 if not os.path.isdir(settingsFolder):
 	os.mkdir(settingsFolder)
-
+## If setup argument is passed, install the necessary requirements
 if setup:
+	relay("Setup argument passed. Performing setup")
 	if os.geteuid() == 0:
-		relay("Attempting to install BeautifulSoup, Mastodon, and Tweepy...")
-		os.system("pip3 install bs4 Mastodon.py tweepy")
-		relay("Successful")
-		exit()
+		relay("Attempting to install requirements...")
+		os.system("pip3 install -r requirements.txt")
 	else:
-		relay("Attempting to install BeautifulSoup, Mastodon, and Tweepy...")
-		os.system("sudo pip3 install bs4 Mastodon.py tweepy")
-		relay("Successful")
-		exit()
+		relay("Attempting to install requirements...")
+		os.system("sudo pip3 install -r requirements.txt")
+	relay("Success! Please start the script without the '-s' argument")
+	exit()
+## Now that we know these should be installed, we can import them
+## TODO: make a try/except catch?
 from bs4 import BeautifulSoup as bsoup
 from mastodon import Mastodon
 import tweepy
-
+## Internal config and initializations
 settingsConf = os.path.join(settingsFolder, "settings.conf")
 authFile = os.path.join(settingsFolder, "auth.cred")
 stable = "0"
@@ -53,7 +54,8 @@ devel = "0"
 proton = "0"
 dxvk = "0"
 ge = "0"
-
+## Set font colors for terminal
+## TODO: remove now that this is installable?
 class style():
 	RED = '\033[31m'
 	GREEN = '\033[32m'
@@ -61,7 +63,7 @@ class style():
 	BLUE = '\033[34m'
 	CYAN = '\033[36m'
 	RESET = '\033[0m'
-
+## Wizard to set up an auth.cred file if one is not found
 def newSetup(platform):
 	if platform == "Twitter":
 		relay("If you haven't already, please go to https://developer.twitter.com and get your App's keys and tokens.")
@@ -73,7 +75,7 @@ def newSetup(platform):
 		relay(f"This information is being written to {authFile}. Please wait.")
 		with open(authFile, 'a') as twitterAuth:
 			twitInfo = {"twitter": [{"twit_api_key": twit_con_key, "twit_api_sec": twit_con_sec, "twit_access_key": twit_acc_key, "twit_access_secret": twit_acc_sec}]}
-			json.dumps(twitInfo, twitterAuth, indent=4)
+			json.dump(twitInfo, twitterAuth, indent=4)
 		time.sleep(5)
 		relay(f"Data written to {authFile}. You are now ready to use the Twitter API!")
 
@@ -89,7 +91,7 @@ def newSetup(platform):
 			json.dump(mastInfo, mastAuth, indent=4)
 		time.sleep(5)
 		relay(f"Data written to {mastAuthFile}. You are now ready to use the Mastodon API!")
-
+## Stubs for in debug mode (nostly for testing without an auth.cred)
 if debug:
 	class twitter:
 		def update_status(message):
@@ -97,7 +99,7 @@ if debug:
 	class mastodon:
 		def status_post(message):
 			relay("Fake Mastodon post: {}".format(message))
-
+## Import data from auth.cred
 if not debug:
 # Remove this if you don't want Twitter support
 	relay(f"Looking for Twitter information...")
@@ -154,7 +156,7 @@ if not debug:
 
 	mastodon = Mastodon(client_id=MAST_CONSUMER_KEY, client_secret=MAST_CONSUMER_SECRET, access_token=MAST_ACCESS_KEY, api_base_url=mastodonURL)
 	# End Mastodon remove
-
+## Check cached versions from settings.conf
 def versionCheck():
 	global stable, devel, proton, dxvk, ge
 	relay("Checking cached versions of software...")
@@ -179,7 +181,7 @@ def post(message):
 	relay(f"{style.BLUE}Posting update to Mastodon.{style.RESET}")
 	mastodon.status_post(message)
 	relay(f"{style.GREEN}Updated to Mastodon successfully.\n{style.RESET}")
-
+## Write updated information to settings.conf
 def write2File():
 	global stable, devel, proton, dxvk, ge
 
@@ -190,7 +192,7 @@ def write2File():
 
 	os.rename(settingsConf + ".new", settingsConf)
 	relay("Written to file.\n")
-
+## Pull information from Github via Github API
 def getGithubInfo(project, url):
 	page = requests.get(url)
 	information = page.json()
@@ -204,7 +206,7 @@ def getGithubInfo(project, url):
 def main():
 	global stable, devel, proton, dxvk, ge
 
-	# Get information from winehq website and github
+	# URLs of the different projects
 	URLs = {
 			"Wine":	  "https://www.winehq.org",
 			"Proton": "https://api.github.com/repos/ValveSoftware/Proton/releases",
@@ -213,7 +215,7 @@ def main():
 			}
 
 	for current in URLs:
-
+		## Start with Wine since it has a stable release cadence (avg every 2 weeks for Devel)
 		if current.lower() == "wine":
 			page = requests.get(URLs[current])
 			parsed = bsoup(page.content, 'html.parser')
@@ -261,6 +263,8 @@ def main():
 				write2File()
 	else:
 		relay("No update detected.")
-	
-versionCheck()
-main()
+if __name__ == "__main__":
+	relay(f"Started at {datetime.datetime.now()}")
+	versionCheck()
+	main()
+	relay(f"Finished at {datetime.datetime.now()}")
