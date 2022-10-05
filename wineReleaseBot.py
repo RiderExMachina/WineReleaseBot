@@ -22,7 +22,7 @@ else:
 ## Set up logging
 ## TODO: change log file to include month/year
 ## TODO: make log folder delete old logs
-logging.basicConfig(filename=f"{settingsFolder}/wrb{}.log", encoding="utf-8", level=logging.DEBUG)
+logging.basicConfig(filename=f"{settingsFolder}/wrb-{datetime.datetime.now().strftime('%B')}.log", encoding="utf-8", level=logging.DEBUG)
 def relay(msg):
 	logging.debug(msg)
 	print(msg)
@@ -264,6 +264,7 @@ def main():
 	else:
 		relay("No update detected.")
 if __name__ == "__main__":
-	relay(f"Running at {datetime.datetime()}")
+	relay(f"Started at {datetime.datetime.now()}")
 	versionCheck()
 	main()
+	relay(f"Finished at {datetime.datetime.now()}")
