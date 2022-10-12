@@ -161,6 +161,7 @@ def versionCheck():
 	global stable, devel, proton, dxvk, ge
 	relay("Checking cached versions of software...")
 	if os.path.isfile(settingsConf):
+		relay(f"\t- Opening {settingsConf}...")
 		with open(settingsConf, "r") as settingsFile:
 			settings = json.load(settingsFile)
 
