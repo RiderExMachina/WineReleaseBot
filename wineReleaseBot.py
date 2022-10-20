@@ -174,7 +174,7 @@ def clearOld():
 			cleared = True
 			relay(f"\t\t-Removing {filename}")
 			os.remove(os.path.join(settingsFolder, filename))
-	if cleared = True: relay("\t- Old logs cleared out")
+	if cleared == True: relay("\t- Old logs cleared out")
 ## Check cached versions from settings.conf
 def versionCheck():
 	global stable, devel, proton, dxvk, ge
