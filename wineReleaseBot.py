@@ -22,12 +22,12 @@ else:
 ## Set up logging
 ## TODO: change log file to include month/year
 ## TODO: make log folder delete old logs
-logging.basicConfig(filename=f"{settingsFolder}/wrb-{datetime.datetime.now().strftime('%B-%Y')}.log", encoding="utf-8", level=logging.DEBUG)
+logging.basicConfig(filename=f"{settingsFolder}/wrb-{datetime.datetime.now().strftime('%B-%d-%Y')}.log", encoding="utf-8", level=logging.DEBUG)
 def relay(msg):
 	logging.debug(msg)
 	print(msg)
 
-relay(f"Setting {settingsFolder} as settingsFolder.")
+relay(f"Setting {settingsFolder} as settingsFolder...")
 if not os.path.isdir(settingsFolder):
 	os.mkdir(settingsFolder)
 ## If setup argument is passed, install the necessary requirements
@@ -42,10 +42,17 @@ if setup:
 	relay("Success! Please start the script without the '-s' argument")
 	exit()
 ## Now that we know these should be installed, we can import them
-## TODO: make a try/except catch?
-from bs4 import BeautifulSoup as bsoup
-from mastodon import Mastodon
-import tweepy
+try:
+	from bs4 import BeautifulSoup as bsoup
+	from mastodon import Mastodon
+	import tweepy
+except:
+	if debug:
+		pass
+	else:
+		relay("\nOne of the dependencies has not been installed on this system!\nPlease run with the -s flag!\n")
+		quit()
+
 ## Internal config and initializations
 settingsConf = os.path.join(settingsFolder, "settings.conf")
 authFile = os.path.join(settingsFolder, "auth.cred")
@@ -91,18 +98,18 @@ def newSetup(platform):
 			json.dump(mastInfo, mastAuth, indent=4)
 		time.sleep(5)
 		relay(f"Data written to {mastAuthFile}. You are now ready to use the Mastodon API!")
-## Stubs for in debug mode (nostly for testing without an auth.cred)
+## Stubs for in debug mode (mostly for testing without an auth.cred)
 if debug:
 	class twitter:
 		def update_status(message):
-			relay("Fake Twitter post: {}".format(message))
+			relay("\t\tFake Twitter post: {}".format(message))
 	class mastodon:
 		def status_post(message):
-			relay("Fake Mastodon post: {}".format(message))
+			relay("\t\tFake Mastodon post: {}".format(message))
 ## Import data from auth.cred
 if not debug:
 # Remove this if you don't want Twitter support
-	relay(f"Looking for Twitter information...")
+	relay("\tLooking for Twitter information...")
 	if os.path.isfile(authFile):
 		with open(authFile, "r") as Auth:
 			twit_info = json.load(Auth)["twitter"]
@@ -112,7 +119,7 @@ if not debug:
 				TWITTER_CONSUMER_SECRET = info["twit_api_secret"]
 				TWITTER_ACCESS_KEY = info["twit_access_key"]
 				TWITTER_ACCESS_SECRET = info["twit_access_secret"]
-		relay("Twitter information loaded successfully.")
+		relay("\tTwitter information loaded successfully.")
 			
 	else:
 		relay(f"{style.RED}A file with your Twitter API information does not exist!{style.RESET}")
@@ -133,11 +140,11 @@ if not debug:
 
 	# Remove this if you don't want Mastodon support
 	mastodonURL = "botsin.space"
-	relay("Looking for Mastodon information...")
+	relay("\t - Looking for Mastodon information...")
 	if os.path.isfile(authFile):
 		with open(authFile, "r") as Auth:
 			mast_info = json.load(Auth)["mastodon"]
-			relay("Found.")
+			relay("\tFound.")
 			for info in mast_info:	
 				MAST_CONSUMER_KEY = info["mast_api_key"]
 				MAST_CONSUMER_SECRET = info["mast_api_secret"]
@@ -156,10 +163,21 @@ if not debug:
 
 	mastodon = Mastodon(client_id=MAST_CONSUMER_KEY, client_secret=MAST_CONSUMER_SECRET, access_token=MAST_ACCESS_KEY, api_base_url=mastodonURL)
 	# End Mastodon remove
+
+## Clear out old logs
+
+def clearOld():
+	relay("\t- Looking for old logs to clear out...")
+	currentMonth = datetime.datetime.now().strftime("%B")
+	for filename in os.listdir(settingsFolder):
+		if ".log" in filename and currentMonth not in filename:
+			relay(f"\t\t-Removing {filename}")
+			os.remove(os.path.join(settingsFolder, filename))
+	relay("\t- Old logs cleared out")
 ## Check cached versions from settings.conf
 def versionCheck():
 	global stable, devel, proton, dxvk, ge
-	relay("Checking cached versions of software...")
+	relay("\t- Checking cached versions of software...")
 	if os.path.isfile(settingsConf):
 		relay(f"\t- Opening {settingsConf}...")
 		with open(settingsConf, "r") as settingsFile:
@@ -171,28 +189,28 @@ def versionCheck():
 			dxvk = settings["DXVK"]
 			ge = settings["GE"]
 
-		relay("--- From file ---")
-		relay(f"Wine Stable:\t{stable}\nWine Devel:\t{devel}\nProton:\t{proton}\nDXVK:\t{dxvk}\nGE:\t{ge}\n")
+		relay("\t\t--- From file ---")
+		relay(f"\t\tWine Stable:\t{stable}\n\t\tWine Devel:\t{devel}\n\t\tProton:\t{proton}\n\t\tDXVK:\t{dxvk}\n\t\tGE:\t{ge}\n")
 
 def post(message):
-	relay(f"{style.CYAN}Posting update to Twitter.{style.RESET}")
+	relay(f"\t\t{style.CYAN}Posting update to Twitter.{style.RESET}")
 	twitter.update_status(message)
-	relay(f"{style.GREEN}Updated to Twitter posted successfully.\n{style.RESET}")
+	relay(f"\t\t{style.GREEN}Updated to Twitter successfully.\n{style.RESET}")
 	
-	relay(f"{style.BLUE}Posting update to Mastodon.{style.RESET}")
+	relay(f"\t\t{style.BLUE}Posting update to Mastodon.{style.RESET}")
 	mastodon.status_post(message)
-	relay(f"{style.GREEN}Updated to Mastodon successfully.\n{style.RESET}")
+	relay(f"\t\t{style.GREEN}Updated to Mastodon successfully.\n{style.RESET}")
 ## Write updated information to settings.conf
 def write2File():
 	global stable, devel, proton, dxvk, ge
 
-	relay("Writing to configuration file...")
+	relay("\tWriting to configuration file...")
 	with open(settingsConf + ".new", "w") as newSettings:
 		info = {"Stable":stable, "Development":devel, "Proton": proton, "DXVK": dxvk, "GE": ge}
 		json.dump(info, newSettings, indent=4)
 
 	os.rename(settingsConf + ".new", settingsConf)
-	relay("Written to file.\n")
+	relay("\tWritten to file.\n")
 ## Pull information from Github via Github API
 def getGithubInfo(project, url):
 	page = requests.get(url)
@@ -227,9 +245,9 @@ def main():
 			newDevel = versions[1].split("/")[-1]
 
 			if stable != newStable or devel != newDevel:
-				relay(f"!!! {style.RED}WINE{style.RESET} {style.YELLOW}UPDATE DETECTED!{style.RESET} !!!")
-				relay("--- From web --- \n\nStable release: {} \nDevelopment release: {}\n".format(newStable, newDevel))
-				relay("Writing to configuration file.")
+				relay(f"\t\t!!! {style.RED}WINE{style.RESET} {style.YELLOW}UPDATE DETECTED!{style.RESET} !!!")
+				relay("\t\t--- From web --- \n\n\t\tStable release: {} \n\t\tDevelopment release: {}\n".format(newStable, newDevel))
+				relay("\tWriting to configuration file.")
 				
 				if stable != newStable and devel == newDevel:
 					post("WINE Stable has updated to version {}!\nCheck the release notes here: {}".format(newStable, URLs[current]+versions[0]))
@@ -249,8 +267,8 @@ def main():
 			link, release = getGithubInfo(current, URLs[current])
 
 			if eval(current.lower()) != release:
-				relay(f"!!! {style.YELLOW}{current.upper()} UPDATE DETECTED!{style.RESET} !!!")
-				relay("--- From web -- \n\nLatest release: {}\n".format(release))
+				relay(f"\t\t!!! {style.YELLOW}{current.upper()} UPDATE DETECTED!{style.RESET} !!!")
+				relay("\t\t--- From web -- \n\n\t\tLatest release: {}\n".format(release))
 				
 				post(f"{current} has updated to release {release}!\nCheck out the release here: {link}")
 				
@@ -263,9 +281,10 @@ def main():
 
 				write2File()
 	else:
-		relay("No update detected.")
+		relay("\tNo update detected.")
 if __name__ == "__main__":
-	relay(f"Started at {datetime.datetime.now()}")
+	relay(f"- Started at {datetime.datetime.now()}")
 	versionCheck()
 	main()
-	relay(f"Finished at {datetime.datetime.now()}")
+	clearOld()
+	relay(f"- Finished at {datetime.datetime.now()}")
