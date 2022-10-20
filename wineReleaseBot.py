@@ -165,15 +165,16 @@ if not debug:
 	# End Mastodon remove
 
 ## Clear out old logs
-
 def clearOld():
+	cleared = False
 	relay("\t- Looking for old logs to clear out...")
 	currentMonth = datetime.datetime.now().strftime("%B")
 	for filename in os.listdir(settingsFolder):
 		if ".log" in filename and currentMonth not in filename:
+			cleared = True
 			relay(f"\t\t-Removing {filename}")
 			os.remove(os.path.join(settingsFolder, filename))
-	relay("\t- Old logs cleared out")
+	if cleared = True: relay("\t- Old logs cleared out")
 ## Check cached versions from settings.conf
 def versionCheck():
 	global stable, devel, proton, dxvk, ge
