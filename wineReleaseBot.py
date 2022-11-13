@@ -199,7 +199,7 @@ def post(message):
 	relay(f"\t\t{style.GREEN}Updated to Twitter successfully.\n{style.RESET}")
 	
 	relay(f"\t\t{style.BLUE}Posting update to Mastodon.{style.RESET}")
-	mastodon.status_post(message)
+	mastodon.status_post(message + "\n#WineHQ #Proton #Linux #DXVK")
 	relay(f"\t\t{style.GREEN}Updated to Mastodon successfully.\n{style.RESET}")
 ## Write updated information to settings.conf
 def write2File():
