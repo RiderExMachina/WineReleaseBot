@@ -30,15 +30,16 @@ def relay(msg):
 relay(f"Setting {settingsFolder} as settingsFolder...")
 if not os.path.isdir(settingsFolder):
 	os.mkdir(settingsFolder)
+
 ## If setup argument is passed, install the necessary requirements
 if setup:
+	import subprocess
 	relay("Setup argument passed. Performing setup")
-	if os.geteuid() == 0:
-		relay("Attempting to install requirements...")
-		os.system("pip3 install -r requirements.txt")
-	else:
-		relay("Attempting to install requirements...")
-		os.system("sudo pip3 install -r requirements.txt")
+	relay("Attempting to install requirements...")
+	cmd = "pip3 install -r requirements.txt"
+	if os.geteuid() != 0:
+		cmd = f"sudo {cmd}"
+	subprocess.run(cmd, shell=True, check=True)
 	relay("Success! Please start the script without the '-s' argument")
 	exit()
 ## Now that we know these should be installed, we can import them
