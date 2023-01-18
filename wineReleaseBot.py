@@ -9,19 +9,19 @@ args = parser.parse_args()
 debug = args.debug
 setup = args.setup
 ## Set global folders for config and log files. I know, the log files are not in /var/log or ~/.cache, I may fix this later
-user = os.geteuid()
-if user == 0:
-	settingsFolder = "/etc/wrb"
-else:
-	if os.path.isdir(".git"):
-		settingsFolder = "."
+def get_settings_folder():
+	user = os.geteuid()
+	if user == 0:
+		return "/etc/wrb"
+	elif os.path.isdir(".git"):
 		print(f"Git version detected.")
+		return "."
 	else:
 		home_folder = os.path.expanduser("~")
-		settingsFolder = os.path.join(home_folder, ".config/wrb")
+		return os.path.join(home_folder, ".config/wrb")
+
+settingsFolder = get_settings_folder()
 ## Set up logging
-## TODO: change log file to include month/year
-## TODO: make log folder delete old logs
 logging.basicConfig(filename=f"{settingsFolder}/wrb-{datetime.datetime.now().strftime('%B-%d-%Y')}.log", encoding="utf-8", level=logging.DEBUG)
 def relay(msg):
 	logging.debug(msg)
