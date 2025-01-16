@@ -1,3 +1,4 @@
 *.cred
 *.new
 *.log
+*.json
