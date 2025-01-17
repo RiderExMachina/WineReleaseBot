@@ -24,7 +24,7 @@ def clearOld():
 
 def post(message):
 	relay(f"\t\t{style.CYAN}Posting update to Bluesky.{style.RESET}")
-	bsky.update_status(message)
+	bsky.status_post(message)
 	relay(f"\t\t{style.GREEN}Updated to Bluesky successfully.\n{style.RESET}")
 
 	relay(f"\t\t{style.BLUE}Posting update to Mastodon.{style.RESET}")
@@ -32,9 +32,9 @@ def post(message):
 	relay(f"\t\t{style.GREEN}Updated to Mastodon successfully.\n{style.RESET}")
 
 def createAuth(authFile):
-    relay("A new auth.cred file must be created. Which social media would you like to set up?\n\t1. Mastodon\n\t2. Bluesky")
+    relay("A new auth.cred file must be created. Which social media would you like to set up?\n\t1. Mastodon\n\t2. Bluesky\n\t3. Both")
     platform = input("> ")
-    if platform in ["1", "Mastodon"]:
+    if platform in ["1", "3", "Mastodon"]:
         relay("If you haven't already, please go to your Mastodon's instance and get your keys and tokens.")
         mast_inst    = input("Paste your Mastodon instance here > ").strip()
         mast_con_key = input("Paste your API Key here > ").strip()
@@ -43,13 +43,23 @@ def createAuth(authFile):
 
         relay(f"This information is being written to {authFile}. Please wait.")
         with open(authFile, 'a') as mastAuth:
-            mastInfo = {"mastodon": [{"mast_instance": mast_inst, "mast_api_key": mast_con_key, "mast_api_secret": mast_con_sec, "mast_access_key": mast_acc_key}]}
+            mastInfo = {"mastodon": {"mast_instance": mast_inst, "mast_api_key": mast_con_key, "mast_api_secret": mast_con_sec, "mast_access_key": mast_acc_key}}
             json.dump(mastInfo, mastAuth, indent=4)
         time.sleep(5)
         relay(f"Data written to {authFile}. You are now ready to use the Mastodon API!")
-    if platform in ["2", "Bluesky"]:
-        relay("If you haven't already, please go to Bluesky and aet up your App Password.")
-        bsky_username = input("")
+    if platform in ["2", "3", "Bluesky"]:
+        relay("If you haven't already, please go to Bluesky and set up your App Password.")
+        bsky_username = input("Enter your Bluesky username here > ").strip()
+        bsky_pass     = input("Enter you Bluesky app password here > ").strip()
+
+        relay(f"This information is being written to {authFile}. Please wait.")
+
+        with open(authFile, 'a') as bskyAuth:
+            bskyInfo = {"bsky": {"bsky_handle": bsky_username, "bsky_app_pass": bsky_pass}}
+            json.dump(bskyInfo, bksyAuth, indent=4)
+        time.sleep(3)
+        relay(f"Data written to {authFile}. You are now ready to use the Bluesky API!")
+
 
 def importAuth(authFile):
     """
@@ -63,7 +73,7 @@ def importAuth(authFile):
         "mast_api_secret": "baebee9128ad...",
         "mast_access_key": "093487961324..."
     }],
-        "bluesky": [{
+        "bsky": [{
         "bsky_handle": "example.bluesky.social",
         "bsky_app_pass": "123-456-789",
     }]
@@ -72,16 +82,21 @@ def importAuth(authFile):
     with open(authFile, 'r') as Auth:
         mast_info = json.load(Auth)["mastodon"]
         relay("\tMastodon info found.")
-        #bsky_info = json.load(Auth)["bsky"]
 
-    for info in mast_info:
-            MAST_INSTANCE = info["mast_instance"]
-            MAST_CONSUMER_KEY = info["mast_api_key"]
-            MAST_CONSUMER_SECRET = info["mast_api_secret"]
-            MAST_ACCESS_KEY = info["mast_access_key"]
+        bsky_info = json.load(Auth)["bsky"]
+        relay("\tBluesky info found.")
+
+    MAST_INSTANCE = mast_info["mast_instance"]
+    MAST_CONSUMER_KEY = mast_info["mast_api_key"]
+    MAST_CONSUMER_SECRET = mast_info["mast_api_secret"]
+    MAST_ACCESS_KEY = mast_info["mast_access_key"]
     relay("Mastodon information loaded successfully.")
 
-    mastodon = Mastodon(client_id=MAST_CONSUMER_KEY, client_secret=MAST_CONSUMER_SECRET, access_token=MAST_ACCESS_KEY, api_base_url=MAST_INSTANCE)
+    BSKY_HANDLE = bsky_info["bsky_handle"]
+    BSKY_APP_PASS = bsky_info["bsky_app_pass"]
+
+    mastodon = Mastodon(api_base_url=MAST_INSTANCE, client_id=MAST_CONSUMER_KEY, client_secret=MAST_CONSUMER_SECRET, access_token=MAST_ACCESS_KEY)
+    bsky = bsky(client_id=BSKY_HANDLE, app_password=BSKY_APP_PASS)
 
     return mastodon
 

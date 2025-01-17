@@ -3,7 +3,7 @@ from dateteme import datetime, timezone
 
 _DEFAULT_USER_AGENT = "Bsky at Home"
 
-class bksy():
+class bksy:
     @staticmethod
     def __init__(self,
                 client_id = None,
@@ -15,21 +15,16 @@ class bksy():
         self.app_password = app_password
         self.session = session
 
-        if session:
-            self.session
-        else:
-            self.session = requests.Session()
-
         self.user_agent = user_agent
 
     def authenticate(self):
         resp = requests.post(
             "https://bsky.social/xrpc/com.atproto.server.createSession",
-            json={"identifier": BLUESKY_HANDLE, "password": BLUESKY_APP_PASSWORD},
+            json={"identifier": self.client_id, "password": app_password},
         )
         resp.raise_for_status()
         session = resp.json()
-        print(session["accessJwt"])
+        return self.session = session["accessJwt"]
 
 
     def status_post(self, message):
@@ -43,17 +38,13 @@ class bksy():
 
         resp = requests.post(
             "https://bsky.social/xrpc/com.atproto.repo.createRecord",
-            headers={"Authorization": "Bearer "+ session["accessJwt"]},
+            headers={"Authorization": "Bearer "+ self.session["accessJwt"]},
             json = {
-                "repo": session["did"],
+                "repo": self.session["did"],
                 "collection": "app.bsky.feed.post",
                 "record": post,
             }
         )
-        response = json.dumps(resp.json(), indent=2)
-        post_validation = response['validationStatus']
-        if post_validation = "valid":
-
         resp.raise_for_status()
 
 
