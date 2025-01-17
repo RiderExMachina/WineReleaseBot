@@ -59,7 +59,7 @@ def getNewFeeds(settingsFolder):
         ## Replace bad characters or duplicate words with something more manageable
         ## and then make a foldername from the new name
         ## TODO: Maybe add a more robust filter list?
-        apiURL = f"https://api.github.com/repos/{owner}/{project}"
+        apiURL = f"https://api.github.com/repos/{owner}/{project}/releases"
         if requests.get(apiURL).status_code == 200:
             relay(f"\t\t- {project} verified! Adding to list")
             links[feed] = {"name": project, "url": "", "api-url": apiURL, "latest-release": 0, "tags": "#foss #OpenSource"}

@@ -22,14 +22,20 @@ def init():
     if "vm" in os.popen("hostnamectl | grep Chassis").read():
         relay("Running in a VM, probably a server?")
         defaultMainFolder = "/etc/wrb"
+        defaultLogFolder = "/var/log/wrb"
     else:
         relay("Assuming we're running on a PC")
         homeFolder = os.path.expanduser("~")
         defaultMainFolder = f"{homeFolder}/.config/wrb"
+        defaultLogFolder = f"{homeFolder}/.cache/wrb"
     ## Get the desired folder from the User and add it to the empty dictionary above
     if not os.path.isdir(defaultMainFolder):
         os.mkdir(defaultMainFolder)
+    if not os.path.isdir(defaultLogFolder):
+        os.mkdir(defaultLogFolder)
+
     info["info-dir"] = defaultMainFolder
+    info["log-dir"] = defaultLogFolder
 
     ## We have all the information we need, now we can write it to the file
     with open("settings.json", "w") as settingsFile:
