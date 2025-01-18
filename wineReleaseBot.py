@@ -1,125 +1,22 @@
 #!/usr/bin/env python3
-import requests, re, time, os, argparse, json, logging, datetime
-## Create aruments for debug and setup. Could potentially make more, like -m or -t for desired platforms to post to.
+## Rewrite of the original Wine Release Bot
+## Things could probably be improved further, but I'm happy with this
+
+import requests, relay, time, os, argparse, json, datetime, shutil
+from atproto import Client, client_utils
+from mastodon import Mastodon
+
 parser = argparse.ArgumentParser()
-parser.add_argument('-d', '--debug', help="Debug mode: will not post to Twitter or Mastodon", default=False, action='store_true')
-parser.add_argument('-s', '--setup', help="Install prerequisites to make sure everything is good to go.", default=False, action='store_true')
+parser.add_argument('-d', '--debug', help="Debug mode: will not actually create posts.", default=False, action='store_true')
+#parser.add_argument('-s', '--setup', help="Install prerequisites to make sure everything is good to go.", default=False, action='store_true')
 args = parser.parse_args()
 
 debug = args.debug
-setup = args.setup
-## Set global folders for config and log files. I know, the log files are not in /var/log or ~/.cache, I may fix this later
-def get_settings_folder():
-	user = os.geteuid()
-	if user == 0:
-		return "/etc/wrb"
-	elif os.path.isdir(".git"):
-		print(f"Git version detected.")
-		return "."
-	else:
-		home_folder = os.path.expanduser("~")
-		return os.path.join(home_folder, ".config/wrb")
-
-settingsFolder = get_settings_folder()
-## Set up logging
-logging.basicConfig(filename=f"{settingsFolder}/wrb-{datetime.datetime.now().strftime('%B-%d-%Y')}.log", encoding="utf-8", level=logging.DEBUG)
-def relay(msg):
-	logging.debug(msg)
-	print(msg)
-
-relay(f"Setting {settingsFolder} as settingsFolder...")
-if not os.path.isdir(settingsFolder):
-	os.mkdir(settingsFolder)
-
-## If setup argument is passed, install the necessary requirements
-if setup:
-	import subprocess
-	relay("Setup argument passed. Performing setup")
-	relay("Attempting to install requirements...")
-	cmd = "pip3 install -r requirements.txt"
-	if os.geteuid() != 0:
-		cmd = f"sudo {cmd}"
-	subprocess.run(cmd, shell=True, check=True)
-	relay("Success! Please start the script without the '-s' argument")
-	exit()
-## Now that we know these should be installed, we can import them
-try:
-	from mastodon import Mastodon
-except ImportError as e:
-	if debug:
-		relay(f"Importing modules: {e}")
-	else:
-		relay("\nOne of the dependencies has not been installed on this system!\nPlease run with the -s flag!\n")
-		quit()
-
-## Internal config and initializations
-settingsConf = os.path.join(settingsFolder, "settings.conf")
-authFile = os.path.join(settingsFolder, "auth.cred")
-wine = "0"
-proton = "0"
-dxvk = "0"
-ge = "0"
-## Set font colors for terminal
-## TODO: remove now that this is installable?
-class style():
-	RED = '\033[31m'
-	GREEN = '\033[32m'
-	YELLOW = '\033[33m'
-	BLUE = '\033[34m'
-	CYAN = '\033[36m'
-	RESET = '\033[0m'
-## Wizard to set up an auth.cred file if one is not found
-def newSetup(platform):
-	if platform == "Mastodon":
-		relay("If you haven't already, please go to your Mastodon's instance and get your keys and tokens.")
-		mast_con_key = input("Paste your API Key here > ").strip()
-		mast_con_sec = input("Paste your API Secret Key here > ").strip()
-		mast_acc_key = input("Paste your Access Token here > ").strip()
-
-		relay(f"This information is being written to {authFile}. Please wait.")
-		with open(authFile, 'a') as mastAuth:
-			mastInfo = {"mastodon": [{"mast_api_key": mast_con_key, "mast_api_secret": mast_con_sec, "mast_access_key": mast_acc_key}]}
-			json.dump(mastInfo, mastAuth, indent=4)
-		time.sleep(5)
-		relay(f"Data written to {mastAuthFile}. You are now ready to use the Mastodon API!")
-## Stubs for in debug mode (mostly for testing without an auth.cred)
-if debug:
-	class twitter:
-		def update_status(message):
-			relay("\t\tFake Twitter post: {}".format(message))
-	class mastodon:
-		def status_post(message):
-			relay("\t\tFake Mastodon post: {}".format(message))
-## Import data from auth.cred
-if not debug:
-	# Remove this if you don't want Mastodon support
-	mastodonURL = "botsin.space"
-	relay("\t - Looking for Mastodon information...")
-	if os.path.isfile(authFile):
-		with open(authFile, "r") as Auth:
-			mast_info = json.load(Auth)["mastodon"]
-			relay("\tFound.")
-			for info in mast_info:	
-				MAST_CONSUMER_KEY = info["mast_api_key"]
-				MAST_CONSUMER_SECRET = info["mast_api_secret"]
-				MAST_ACCESS_KEY = info["mast_access_key"]
-		relay("Mastodon information loaded successfully.")
-	else:
-		relay(f"{style.RED}A file with your Mastodon API information does not exist!{style.RESET}")
-		setup = input(f"Would you like to create one? [{style.GREEN}Y{style.RESET}/{style.RED}n{style.RESET}]")
-		affirmative = ["yes", "y", ""]
-		negative = ["no", "n"]
-		if setup.lower() in affirmative:
-			newSetup("Mastodon")
-		if setup.lower() in negative:
-			relay(f"{style.YELLOW}Please comment out or remove the Mastodon code.{style.RESET}")
-			exit()
-
-	mastodon = Mastodon(client_id=MAST_CONSUMER_KEY, client_secret=MAST_CONSUMER_SECRET, access_token=MAST_ACCESS_KEY, api_base_url=mastodonURL)
-	# End Mastodon remove
+#setup = args.setup
+relay = relay.relay
 
 ## Clear out old logs
-def clearOld():
+def clearOld(settingsFolder):
 	cleared = False
 	relay("\t- Looking for old logs to clear out...")
 	currentMonth = datetime.datetime.now().strftime("%B")
@@ -129,41 +26,153 @@ def clearOld():
 			relay(f"\t\t-Removing {filename}")
 			os.remove(os.path.join(settingsFolder, filename))
 	if cleared == True: relay("\t- Old logs cleared out")
-## Check cached versions from settings.conf
-def versionCheck():
-	global wine, proton, dxvk, ge
-	relay("\t- Checking cached versions of software...")
-	if os.path.isfile(settingsConf):
-		relay(f"\t- Opening {settingsConf}...")
-		with open(settingsConf, "r") as settingsFile:
-			settings = json.load(settingsFile)
-			wine = settings["Wine"]
-			proton = settings["Proton"]
-			dxvk = settings["DXVK"]
-			ge = settings["GE"]
 
-		relay("\t\t--- From file ---")
-		relay(f"\t\tWine:\t{wine}\n\t\tProton:\t{proton}\n\t\tDXVK:\t{dxvk}\n\t\tGE:\t{ge}\n")
+def createAuth(authFile):
+    relay("A new auth.cred file must be created. Which social media would you like to set up?\n\t1. Mastodon\n\t2. Bluesky\n\t3. Both")
+    platform = input("> ")
+    if platform in ["1", "3", "Mastodon"]:
+        relay("If you haven't already, please go to your Mastodon's instance and get your keys and tokens.")
+        mast_inst    = input("Paste your Mastodon instance here > ").strip()
+        mast_con_key = input("Paste your API Key here > ").strip()
+        mast_con_sec = input("Paste your API Secret Key here > ").strip()
+        mast_acc_key = input("Paste your Access Token here > ").strip()
 
-def post(message):
-	relay(f"\t\t{style.CYAN}Posting update to Twitter.{style.RESET}")
-	twitter.update_status(message)
-	relay(f"\t\t{style.GREEN}Updated to Twitter successfully.\n{style.RESET}")
-	
-	relay(f"\t\t{style.BLUE}Posting update to Mastodon.{style.RESET}")
-	mastodon.status_post(message + "\n#WineHQ #Proton #Linux #DXVK")
-	relay(f"\t\t{style.GREEN}Updated to Mastodon successfully.\n{style.RESET}")
-## Write updated information to settings.conf
-def write2File():
-	global wine, proton, dxvk, ge
+        relay(f"This information is being written to {authFile}. Please wait.")
+        with open(authFile, 'a') as mastAuth:
+            mastInfo = {"mastodon": {"mast_instance": mast_inst, "mast_api_key": mast_con_key, "mast_api_secret": mast_con_sec, "mast_access_key": mast_acc_key}}
+            json.dump(mastInfo, mastAuth, indent=4)
+        time.sleep(5)
+        relay(f"Data written to {authFile}. You are now ready to use the Mastodon API!")
+    if platform in ["2", "3", "Bluesky"]:
+        relay("If you haven't already, please go to Bluesky and set up your App Password.")
+        bsky_username = input("Enter your Bluesky username here > ").strip()
+        bsky_pass     = input("Enter you Bluesky app password here > ").strip()
 
-	relay("\tWriting to configuration file...")
-	with open(settingsConf + ".new", "w") as newSettings:
-		info = {"Wine":wine, "Proton": proton, "DXVK": dxvk, "GE": ge}
-		json.dump(info, newSettings, indent=4)
+        relay(f"This information is being written to {authFile}. Please wait.")
 
-	os.rename(settingsConf + ".new", settingsConf)
-	relay("\tWritten to file.\n")
+        with open(authFile, 'a') as bskyAuth:
+            bskyInfo = {"bsky": {"bsky_handle": bsky_username, "bsky_app_pass": bsky_pass}}
+            json.dump(bskyInfo, bksyAuth, indent=4)
+        time.sleep(3)
+        relay(f"Data written to {authFile}. You are now ready to use the Bluesky API!")
+
+
+def importAuth(authFile):
+    """
+    Import auth information from auth.cred file.
+
+    auth.json file should look something like:
+    {
+      "mastodon":{
+        "mast_instance": "examplemast.com",
+        "mast_api_key": "deadbeef98174...",
+        "mast_api_secret": "baebee9128ad...",
+        "mast_access_key": "093487961324..."
+    },
+        "bsky": {
+        "bsky_handle": "example.bluesky.social",
+        "bsky_app_pass": "123-456-789",
+    }
+    }
+    """
+    with open(authFile, 'r') as Auth:
+        mast_info = json.load(Auth)["mastodon"]
+        relay("\tMastodon info found.")
+
+        bsky_info = json.load(Auth)["bsky"]
+        relay("\tBluesky info found.")
+
+    MAST_INSTANCE = mast_info["mast_instance"]
+    MAST_CONSUMER_KEY = mast_info["mast_api_key"]
+    MAST_CONSUMER_SECRET = mast_info["mast_api_secret"]
+    MAST_ACCESS_KEY = mast_info["mast_access_key"]
+    relay("\tMastodon information loaded successfully.")
+
+    BSKY_HANDLE = bsky_info["bsky_handle"]
+    BSKY_APP_PASS = bsky_info["bsky_app_pass"]
+    relay("\tBluesky information loaded successfully.")
+
+    mastodon = Mastodon(api_base_url=MAST_INSTANCE, client_id=MAST_CONSUMER_KEY, client_secret=MAST_CONSUMER_SECRET, access_token=MAST_ACCESS_KEY)
+    bsky = Client()
+    bsky.login(BSKY_HANDLE, BSKY_APP_PASS)
+
+    return mastodon, bsky
+
+def post(authFile, messages):
+    ## Should probably not import everything if there's nothing to import
+    if not debug:
+        if not os.path.isfile(authFile):
+            createAuth(authFile)
+        mastodon, bsky = importAuth(authFile)
+    if debug:
+        class mastodon:
+            def status_post(message):
+                relay("\t\tFake Mastodon post: {}".format(message))
+        class bsky:
+            def send_post(message):
+                relay("\t\tFake Bsky post: {}".format(message))
+    for item in messages:
+        update = messages[item]
+        name = update["name"]
+        url = update["url"]
+        version = update["release"]
+        tags = update["tags"].split(" ")
+
+        bsky_message = client_utils.TextBuilder()
+        bsky_message.text(f"{name} has updated to version {version}. Check it out here:")
+        bsky_message.link(url , url)
+        bsky_message.text("\n")
+        for tag in tags:
+            bsky_message.tag(tag, tags)
+            bsky_message(" ")
+        mastodon_message = f"{name} has updated to version {version}. Check it out here: {url}\n{tags}"
+
+        relay(f"\t\tPosting update to Bluesky.")
+        bsky.send_post(bsky_message)
+        relay(f"\t\tUpdated to Bluesky successfully.\n")
+
+        relay(f"\t\tPosting update to Mastodon.")
+        mastodon.status_post(mastodon_message)
+        relay(f"\t\tUpdated to Mastodon successfully.\n")
+
+def importProjects(projFile):
+    """
+    Import projects from projects.json
+
+    projects.json should look something like:
+    {
+        "project": {
+            "name": "project",
+            "url": "https://projectwebsite.com",
+            "api-url": "https://projectwebsite.com/downloads/latest",
+            "version": "v5.1",
+            "tags": "#
+        }
+    ...
+    }
+    """
+    with open(projFile, 'r') as projects:
+        projList = json.load(projects)
+
+    return projList
+
+def importSettings():
+    """
+    Import settings from settings.conf file.
+
+    settings.conf file should look something like:
+    {
+        "info-dir": "/etc/wrb",
+        "logs-dir": "/var/log/wrb"
+    }
+    """
+    with open('settings.json', 'r') as settingsFile:
+        info = json.load(settingsFile)
+
+    settingsFolder = info["info-dir"]
+
+    return settingsFolder
+
 ## Pull information from Github via Github API
 def getGithubInfo(url):
 	page = requests.get(url)
@@ -185,45 +194,58 @@ def getWineInfo(url):
 
 	return directURL, release
 
+def writeUpdates(projFile, updates):
+    with open(projFile+".new", 'w') as projectFile:
+        json.dump(updates, projectFile, indent=4)
+    shutil.copy(projFile+".new", projFile)
+
+def checkUpdates(projects):
+    updated = {}
+    return_info = {}
+    for project in projects:
+        info = projects[project]
+
+        name = info['name']
+        release_url = info['url']
+        api_url = info["api-url"]
+        cached_release = info["latest-release"]
+        tags = info["tags"]
+
+        if  name == "Wine":
+            new_url, new_release = getWineInfo(api_url)
+        else:
+            new_url, new_release = getGithubInfo(api_url)
+
+        if new_release != cached_release:
+            relay(f"\t!! {name} UPDATE DETECTED !!\n\tPrevious Release: {cached_release}\n\tUpdated Release: {new_release}")
+            updated[name] = {"name": name, "release": new_release, "url": new_url, "tags": tags}
+        else:
+            relay(f"\t - No updates detected for {name}")
+
+        return_info[name] = {"name": name, "url": new_url, "api-url": api_url, "latest-release": new_release, "tags":tags}
+
+    return updated, return_info
+
+
 def main():
-	global wine, proton, dxvk, ge
+    settingsFolder = importSettings()
+    logFolder = "/var/log/wrb"
 
-	# URLs of the different projects
-	URLs = {
-			"Wine":	  "https://gitlab.winehq.org/api/v4/projects/5/releases",
-			"Proton": "https://api.github.com/repos/ValveSoftware/Proton/releases",
-			"DXVK":   "https://api.github.com/repos/doitsujin/dxvk/releases",
-			"GE": 	  "https://api.github.com/repos/GloriousEggroll/proton-ge-custom/releases"
-			}
+    authFile = os.path.join(settingsFolder, "auth.cred")
+    projFile = os.path.join(settingsFolder, "projects.json")
 
-	for current in URLs:
-		if current == "Wine":
-			link, release = getWineInfo(URLs[current])
-		else:
-			link, release = getGithubInfo(URLs[current])
+    projects = importProjects(projFile)
+    updates, info = checkUpdates(projects)
 
-		if eval(current.lower()) != release:
-			relay(f"\t\t!!! {style.YELLOW}{current.upper()} UPDATE DETECTED!{style.RESET} !!!")
-			relay("\t\t--- From web -- \n\n\t\tLatest release: {}\n".format(release))
+    if len(updates) > 0:
+        post(authFile, updates)
+        writeUpdates(projFile, info)
+    clearOld(logFolder)
 
-			post(f"{current} has updated to release {release}!\nCheck out the release here: {link}")
-
-			match current:
-				case "Wine":
-					wine = release
-				case "Proton":
-					proton = release
-				case "DXVK":
-					dxvk = release
-				case "GE":
-					ge = release
-
-			write2File()
-	else:
-		relay("\tNo update detected.")
 if __name__ == "__main__":
-	relay(f"- Started at {datetime.datetime.now()}")
-	versionCheck()
-	main()
-	clearOld()
-	relay(f"- Finished at {datetime.datetime.now()}")
+    relay(f"- Started at {datetime.datetime.now()}")
+    if not os.path.isfile("settings.json"):
+        import setup
+        setup()
+    main()
+    relay(f"- Finished at {datetime.datetime.now()}")
