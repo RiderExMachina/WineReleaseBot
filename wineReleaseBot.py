@@ -2,7 +2,7 @@
 ## Rewrite of the original Wine Release Bot
 ## Things could probably be improved further, but I'm happy with this
 
-import requests, re, relay, time, os, argparse, json, logging, datetime, shutil
+import requests, relay, time, os, argparse, json, datetime, shutil
 from atproto import Client, client_utils
 from mastodon import Mastodon
 
@@ -142,8 +142,11 @@ def importProjects(projFile):
     projects.json should look something like:
     {
         "project": {
+            "name": "project",
             "url": "https://projectwebsite.com",
+            "api-url": "https://projectwebsite.com/downloads/latest",
             "version": "v5.1",
+            "tags": "#
         }
     ...
     }
@@ -159,7 +162,8 @@ def importSettings():
 
     settings.conf file should look something like:
     {
-        "info-dir": "/etc/wrb"
+        "info-dir": "/etc/wrb",
+        "logs-dir": "/var/log/wrb"
     }
     """
     with open('settings.json', 'r') as settingsFile:
