@@ -3,7 +3,8 @@
 ## Things could probably be improved further, but I'm happy with this
 
 import requests, re, relay, time, os, argparse, json, logging, datetime, shutil
-from bluepy import bsky
+from atproto import Client, client_utils
+from mastodon import Mastodon
 
 parser = argparse.ArgumentParser()
 parser.add_argument('-d', '--debug', help="Debug mode: will not actually create posts.", default=False, action='store_true')
@@ -62,16 +63,16 @@ def importAuth(authFile):
 
     auth.json file should look something like:
     {
-      "mastodon":[{
+      "mastodon":{
         "mast_instance": "examplemast.com",
         "mast_api_key": "deadbeef98174...",
         "mast_api_secret": "baebee9128ad...",
         "mast_access_key": "093487961324..."
-    }],
-        "bsky": [{
+    },
+        "bsky": {
         "bsky_handle": "example.bluesky.social",
         "bsky_app_pass": "123-456-789",
-    }]
+    }
     }
     """
     with open(authFile, 'r') as Auth:
@@ -85,17 +86,19 @@ def importAuth(authFile):
     MAST_CONSUMER_KEY = mast_info["mast_api_key"]
     MAST_CONSUMER_SECRET = mast_info["mast_api_secret"]
     MAST_ACCESS_KEY = mast_info["mast_access_key"]
-    relay("Mastodon information loaded successfully.")
+    relay("\tMastodon information loaded successfully.")
 
     BSKY_HANDLE = bsky_info["bsky_handle"]
     BSKY_APP_PASS = bsky_info["bsky_app_pass"]
+    relay("\tBluesky information loaded successfully.")
 
     mastodon = Mastodon(api_base_url=MAST_INSTANCE, client_id=MAST_CONSUMER_KEY, client_secret=MAST_CONSUMER_SECRET, access_token=MAST_ACCESS_KEY)
-    bsky = bsky(client_id=BSKY_HANDLE, app_password=BSKY_APP_PASS)
+    bsky = Client()
+    bsky.login(BSKY_HANDLE, BSKY_APP_PASS)
 
     return mastodon, bsky
 
-def post(messages):
+def post(authFile, messages):
     ## Should probably not import everything if there's nothing to import
     if not debug:
         if not os.path.isfile(authFile):
@@ -106,23 +109,30 @@ def post(messages):
             def status_post(message):
                 relay("\t\tFake Mastodon post: {}".format(message))
         class bsky:
-            def status_post(message):
+            def send_post(message):
                 relay("\t\tFake Bsky post: {}".format(message))
     for item in messages:
         update = messages[item]
         name = update["name"]
         url = update["url"]
         version = update["release"]
-        tags = update["tags"]
+        tags = update["tags"].split(" ")
 
-        message = f"{name} has updated to version {version}. Check it out at the link below {tags} {url}"
+        bsky_message = client_utils.TextBuilder()
+        bsky_message.text(f"{name} has updated to version {version}. Check it out here:")
+        bsky_message.link(url , url)
+        bsky_message.text("\n")
+        for tag in tags:
+            bsky_message.tag(tag, tags)
+            bsky_message(" ")
+        mastodon_message = f"{name} has updated to version {version}. Check it out here: {url}\n{tags}"
 
         relay(f"\t\tPosting update to Bluesky.")
-        bsky.status_post(message)
+        bsky.send_post(bsky_message)
         relay(f"\t\tUpdated to Bluesky successfully.\n")
 
         relay(f"\t\tPosting update to Mastodon.")
-        mastodon.status_post(message)
+        mastodon.status_post(mastodon_message)
         relay(f"\t\tUpdated to Mastodon successfully.\n")
 
 def importProjects(projFile):
@@ -210,8 +220,7 @@ def checkUpdates(projects):
 
         return_info[name] = {"name": name, "url": new_url, "api-url": api_url, "latest-release": new_release, "tags":tags}
 
-    post(updated)
-    return return_info
+    return updated, return_info
 
 
 def main():
@@ -222,9 +231,11 @@ def main():
     projFile = os.path.join(settingsFolder, "projects.json")
 
     projects = importProjects(projFile)
-    updates = checkUpdates(projects)
+    updates, info = checkUpdates(projects)
 
-    writeUpdates(projFile, updates)
+    if len(updates) > 0:
+        post(authFile, updates)
+        writeUpdates(projFile, info)
     clearOld(logFolder)
 
 if __name__ == "__main__":
